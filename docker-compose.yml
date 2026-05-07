@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: upctl
+      POSTGRES_PASSWORD: upctl_dev
+      POSTGRES_DB: upctl
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U upctl"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  authcore:
+    build:
+      context: ./authcore
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      UC_PORT: "3000"
+      UC_DB_URL: postgres://upctl:upctl_dev@postgres:5432/upctl
+      UC_URL: http://localhost:3000
+      NGX_URL: http://localhost:8088
+      JWT_KEY: upctl-dev-jwt-key-change-in-production
+    ports:
+      - "3000:3000"
+
+  upctl-svc:
+    build:
+      context: ./upctl-svc
+    depends_on:
+      authcore:
+        condition: service_started
+    environment:
+      UPCTL_PORT: "3005"
+      GITEA_API_BASE: http://gitea:3000/api/v1
+      GITEA_AUTH_HEADER: "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw=="
+    ports:
+      - "3005:3005"
+    volumes:
+      - uploads:/app/uploads
+
+  upctl-web:
+    build:
+      context: ./upctl-web
+    depends_on:
+      - authcore
+      - upctl-svc
+    ports:
+      - "8088:80"
+
+  gitea:
+    image: gitea/gitea:1.22
+    environment:
+      USER_UID: 1000
+      USER_GID: 1000
+      GITEA__database__DB_TYPE: postgres
+      GITEA__database__HOST: postgres:5432
+      GITEA__database__NAME: gitea
+      GITEA__database__USER: gitea
+      GITEA__database__PASSWD: gitea_dev
+      GITEA__server__DOMAIN: localhost:8088
+      GITEA__server__ROOT_URL: http://localhost:8088/gitea/
+      GITEA__server__HTTP_PORT: 3000
+      GITEA__server__SSH_PORT: 2222
+      GITEA__security__SECRET_KEY: gitea-dev-secret-key
+      # Auto-create admin on first start
+      GITEA__admin__USER: ai-bot
+      GITEA__admin__PASSWD: ai-bot-dev-pass
+      GITEA__admin__EMAIL: ai-bot@example.com
+    ports:
+      - "3001:3000"
+      - "2222:22"
+    volumes:
+      - gitea:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  gitea:
+  uploads:
