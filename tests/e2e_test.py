@@ -116,6 +116,34 @@ def api_patch(path: str, data: dict) -> dict:
         return json.loads(resp.read())
 
 
+def api_post_no_auth(path: str, data: dict) -> int:
+    """Make a POST request WITHOUT auth headers, return HTTP status code."""
+    url = f"{GITEA_API_BASE}{path}"
+    body = json.dumps(data).encode()
+    req = urllib.request.Request(url, data=body, method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("Accept", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return resp.status
+    except urllib.error.HTTPError as e:
+        return e.code
+
+
+def test_auth():
+    """Test authentication: unauthorized requests are rejected."""
+    print("\n📋 Authentication")
+    try:
+        status = api_post_no_auth("/tickets", {
+            "title": "should-not-create",
+            "body": "no auth",
+        })
+        check("Unauthorized POST tickets rejected", status == 401,
+              f"expected 401 got {status}")
+    except Exception as e:
+        check("Unauthorized POST tickets rejected", False, str(e))
+
+
 def test_gitea_connectivity():
     """Test that upctl-svc proxy can reach Gitea."""
     print("\n📋 Gitea API Connectivity")
@@ -211,10 +239,13 @@ def main():
     print("upctl-compose E2E Test Suite")
     print("=" * 60)
 
-    # Step 1: Gitea connectivity
+    # Step 1: Authentication
+    test_auth()
+
+    # Step 2: Gitea connectivity
     test_gitea_connectivity()
 
-    # Step 2: Ticket CRUD
+    # Step 3: Ticket CRUD
     test_create_and_close_ticket()
 
     # Step 3: DeepSeek API

@@ -110,6 +110,13 @@ jobs:
           docker compose cp tests/e2e_test.py ai-agent:/app/e2e_test.py
           docker compose exec -T ai-agent python3 /app/e2e_test.py
 
+      - name: E2E frontend tests (Playwright)
+        working-directory: tests/playwright
+        run: |
+          npm install
+          npx playwright install chromium --with-deps 2>&1 | tail -3
+          npx playwright test
+
       - name: Cleanup
         if: always()
         run: docker compose down -v
