@@ -2,7 +2,7 @@
 set -e
 
 echo "[authcore] Running database migrations..."
-diesel migration run --database-url "$UC_DB_URL" --dir /app/migrations
+cd /app && diesel migration run --database-url "$UC_DB_URL"
 
 echo "[authcore] Starting htyuc..."
 exec htyuc
