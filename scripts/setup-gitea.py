@@ -5,7 +5,8 @@ Runs inside the Docker network (ai-agent container).
 
 GITEA 1.22.6 serves on sub-path /gitea/ (derived from ROOT_URL) after install.
 Install page is at root (before install), API is at sub-path (after install).
-Install page: http://gitea:3000/
+Install page: http://gitea:3000/ (redirects to /gitea/)
+Install form: http://gitea:3000/gitea/install
 API: http://gitea:3000/gitea/api/v1/...
 """
 import json
@@ -27,6 +28,7 @@ FORM_HEADERS = {
 }
 
 GITEA_BASE = "http://gitea:3000"  # Root URL for install page (before install)
+GITEA_INSTALL_BASE = "http://gitea:3000/gitea"  # Install form action (at sub-path)
 GITEA_API_BASE = "http://gitea:3000/gitea/api/v1"  # API URL (after install, sub-path)
 
 
@@ -75,7 +77,7 @@ def main():
             log(f"  Gitea reachable (HTTP {status})")
             if "Installation" in body_str or "install" in body_str.lower():
                 log("  Install page detected, submitting install form...")
-                # Submit install form at /install
+                # Submit install form at {GITEA_INSTALL_BASE}/install
                 params = urllib.parse.urlencode({
                     "db_type": "postgres",
                     "db_host": "postgres:5432",
@@ -96,7 +98,7 @@ def main():
                     "admin_confirm_passwd": "ai-bot-dev-pass",
                     "admin_email": "ai-bot@example.com",
                 }).encode()
-                s, b = request(f"{GITEA_BASE}/install", method="POST",
+                s, b = request(f"{GITEA_INSTALL_BASE}/install", method="POST",
                                 data=params, headers=FORM_HEADERS, timeout=30)
                 log(f"  Install POST: HTTP {s}")
                 if s in (302, 303):
