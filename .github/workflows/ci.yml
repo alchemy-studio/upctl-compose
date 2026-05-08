@@ -23,48 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      - name: Build upctl-svc
-        uses: docker/build-push-action@v6
-        with:
-          context: ./upctl-svc
-          tags: upctl-svc:ci
-          load: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
-
-      - name: Build upctl-web
-        uses: docker/build-push-action@v6
-        with:
-          context: ./upctl-web
-          tags: upctl-web:ci
-          load: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
-
-      - name: Build authcore
-        uses: docker/build-push-action@v6
-        with:
-          context: ./authcore
-          tags: authcore:ci
-          load: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
-
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      - name: Build images
+        run: docker compose build authcore upctl-svc upctl-web
 
   integration:
     needs: build
@@ -85,7 +45,7 @@ jobs:
 
       - name: Start built services
         run: |
-          docker compose up -d --no-build authcore upctl-svc upctl-web
+          docker compose up -d authcore upctl-svc upctl-web
           docker compose logs --tail=20 authcore upctl-svc upctl-web
 
       - name: Wait for authcore (30s timeout)
