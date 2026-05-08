@@ -29,6 +29,7 @@ services:
       NGX_URL: http://localhost:8088
       JWT_KEY: upctl-dev-jwt-key-change-in-production
       LOGGER_LEVEL: INFO
+      POOL_SIZE: "10"
     ports:
       - "3000:3000"
 
@@ -42,6 +43,7 @@ services:
       UPCTL_PORT: "3005"
       GITEA_API_BASE: http://gitea:3000/api/v1
       GITEA_AUTH_HEADER: "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw=="
+      JWT_KEY: upctl-dev-jwt-key-change-in-production
     ports:
       - "3005:3005"
     volumes:

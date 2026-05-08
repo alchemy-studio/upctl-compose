@@ -17,17 +17,60 @@ import os
 import sys
 import json
 import time
+import hmac
+import base64
 import urllib.request
 import urllib.error
 
 GITEA_API_BASE = os.environ.get(
     "GITEA_API_BASE", "http://upctl-svc:3005/api/v2/ts"
 )
-GITEA_AUTH = os.environ.get(
-    "GITEA_AUTH_HEADER", "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw=="
-)
+
+
+def generate_jwt() -> str:
+    """Generate a JWT for upctl-svc HtyToken auth using dev JWT_KEY."""
+    jwt_key = os.environ.get("JWT_KEY", "upctl-dev-jwt-key-change-in-production")
+
+    # Minimal HtyToken with ADMIN role so is_admin_or_tester returns true
+    hty_token = {
+        "token_id": "e2e-test-token",
+        "hty_id": None,
+        "app_id": None,
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+        "roles": [{"role_key": "ADMIN"}],
+        "tags": [],
+        "current_org_id": None,
+        "current_org_role_keys": None,
+        "current_department_id": None,
+    }
+
+    now = int(time.time())
+    payload = {
+        "sub": json.dumps(hty_token),
+        "exp": now + 3600,
+        "iat": now,
+    }
+
+    header_b64 = base64.urlsafe_b64encode(
+        json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
+    ).rstrip(b"=").decode()
+    payload_b64 = base64.urlsafe_b64encode(
+        json.dumps(payload).encode()
+    ).rstrip(b"=").decode()
+
+    sig = hmac.new(
+        jwt_key.encode(),
+        f"{header_b64}.{payload_b64}".encode(),
+        "sha256",
+    ).digest()
+    sig_b64 = base64.urlsafe_b64encode(sig).rstrip(b"=").decode()
+
+    return f"{header_b64}.{payload_b64}.{sig_b64}"
+
+
+JWT_TOKEN = generate_jwt()
 HEADERS = {
-    "Authorization": GITEA_AUTH,
+    "Authorization": f"Bearer {JWT_TOKEN}",
     "Content-Type": "application/json",
     "Accept": "application/json",
 }
