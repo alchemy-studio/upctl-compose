@@ -123,28 +123,17 @@ def main():
     else:
         log("  WARNING: Gitea not reachable after 30 retries")
 
-    # Wait for API to be ready
+    # Wait for API to be ready (check authenticated user endpoint)
     log("Waiting for API...")
     for i in range(30):
-        version = api("/version")
-        if version and "version" in version:
-            log(f"API ready (v{version['version']})")
+        user = api("/user")
+        if user and user.get("login"):
+            log(f"API ready (user: {user['login']})")
             break
         time.sleep(2)
     else:
         log("WARNING: API not responding after 30s, may need CLI setup")
         return True  # Don't fail, E2E test will show appropriate errors
-
-    # Wait for admin user
-    log("Checking admin user...")
-    for i in range(15):
-        user = api("/user")
-        if user and user.get("login"):
-            log(f"Admin user: {user['login']}")
-            break
-        time.sleep(2)
-    else:
-        log("WARNING: Admin user not found")
 
     # Create org
     log("Creating 'weli' organization...")

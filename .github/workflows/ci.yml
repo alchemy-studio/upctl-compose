@@ -96,13 +96,8 @@ jobs:
 
       - name: Seed Gitea with org/repo/labels
         run: |
-          # Mark Gitea as installed (INSIDE [security] section) and run DB migration
-          docker compose exec -T gitea bash -c "sed -i '/^\[security\]/a INSTALL_LOCK = true' /data/gitea/conf/app.ini"
-          docker compose exec -T -u git gitea gitea migrate --config /data/gitea/conf/app.ini 2>&1 || echo "migrate may have failed"
+          # Ensure admin user exists (Gitea auto-installs with INSTALL_LOCK from env)
           docker compose exec -T -u git gitea gitea admin user create --config /data/gitea/conf/app.ini --username ai-bot --password ai-bot-dev-pass --email ai-bot@example.com --admin 2>&1 || echo "admin may already exist"
-          # Restart to pick up changes
-          docker compose restart gitea
-          sleep 10
           # Create org, repo, and labels via API
           docker compose cp scripts/setup-gitea.py ai-agent:/app/setup-gitea.py
           docker compose exec -T ai-agent python3 /app/setup-gitea.py
