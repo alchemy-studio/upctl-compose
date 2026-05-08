@@ -167,4 +167,31 @@ docker compose exec ai-agent tmux attach -t deepseek-agent
 GitHub Actions 自动运行：
 1. **lint** — 验证 docker-compose.yml 格式
 2. **build** — 构建所有服务镜像（authcore, upctl-svc, upctl-web, ai-agent）
-3. **integration** — 启动全部服务，运行冒烟测试
+3. **integration** — 启动全部服务，运行冒烟测试和 E2E 测试
+
+## E2E Testing
+
+端到端测试脚本 `tests/e2e_test.py` 覆盖完整工单生命周期：
+
+1. **Gitea API 连通性** — 通过 upctl-svc 代理列出工单和标签
+2. **工单 CRUD** — 创建工单 → 添加 label → 添加评论 → 关闭工单
+3. **DeepSeek API 处理** — 调用 AI 模型并验证响应
+4. **AI Agent 模块** — 导入 poll_worker 模块并列出已批准工单
+
+CI 中自动运行：
+
+```bash
+docker compose cp tests/e2e_test.py ai-agent:/app/e2e_test.py
+docker compose exec -T ai-agent python3 /app/e2e_test.py
+```
+
+也可以在本地运行：
+
+```bash
+# 确保所有服务已启动
+docker compose up -d
+
+# 复制测试脚本到 ai-agent 容器并运行
+docker compose cp tests/e2e_test.py ai-agent:/app/e2e_test.py
+docker compose exec ai-agent python3 /app/e2e_test.py
+```
