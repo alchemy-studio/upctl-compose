@@ -87,6 +87,7 @@ services:
       GITEA__server__HTTP_PORT: 3000
       GITEA__server__SSH_PORT: 2222
       GITEA__security__SECRET_KEY: gitea-dev-secret-key
+      GITEA__security__INSTALL_LOCK: "true"
       # Auto-create admin on first start
       GITEA__admin__USER: ai-bot
       GITEA__admin__PASSWD: ai-bot-dev-pass
