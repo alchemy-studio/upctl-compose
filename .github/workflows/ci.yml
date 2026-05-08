@@ -96,7 +96,8 @@ jobs:
 
       - name: Seed Gitea with org/repo/labels
         run: |
-          # Initialize Gitea via CLI (run as git user to bypass root check)
+          # Mark Gitea as installed and initialize database
+          docker compose exec -T gitea bash -c "sed -i '/^\[security\]/a INSTALL_LOCK = true' /data/gitea/conf/app.ini"
           docker compose exec -T -u git gitea gitea migrate 2>&1 || echo "migrate may have failed"
           docker compose exec -T -u git gitea gitea admin user create --username ai-bot --password ai-bot-dev-pass --email ai-bot@example.com --admin 2>&1 || echo "admin may already exist"
           # Restart to pick up changes
