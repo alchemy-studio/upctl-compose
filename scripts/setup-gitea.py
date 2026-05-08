@@ -77,12 +77,14 @@ def check_gitea_root(gitea_url):
         log(f"  Gitea redirect (status={status})")
         return "redirect"
     elif status == 404:
-        # Gitea returns 404 for root when not installed in some versions
-        # Try the install page directly
+        # Try install page at /install
         install_status, install_body = request(f"{gitea_url}/install", timeout=5)
-        log(f"  Install page: HTTP {install_status}")
+        log(f"  /install: HTTP {install_status}")
         if install_status == 200:
             return "needs_install"
+        # Try /user/sign_up as an alternative
+        signup_status, signup_body = request(f"{gitea_url}/user/sign_up", timeout=5)
+        log(f"  /user/sign_up: HTTP {signup_status}")
         return "unknown"
     else:
         log(f"  Gitea root: status={status}")
@@ -92,6 +94,12 @@ def check_gitea_root(gitea_url):
 def auto_install_gitea(gitea_url):
     """Submit Gitea install form with admin credentials."""
     log("  Attempting auto-install...")
+
+    # First, dump the root page to understand what we're dealing with
+    root_status, root_body = request(f"{gitea_url}/", timeout=5)
+    root_text = root_body.decode(errors="replace")[:1000]
+    log(f"  Root page snippet: {root_text[:200]}")
+
     params = urllib.parse.urlencode({
         "db_type": "postgres",
         "db_host": "postgres:5432",
@@ -115,12 +123,23 @@ def auto_install_gitea(gitea_url):
     status, body = request(f"{gitea_url}/install", method="POST",
                            data=params, headers=FORM_HEADERS, timeout=30)
     body_str = body.decode(errors="replace")[:200]
-    log(f"  Install result: HTTP {status}")
-    if status in (200, 302):
-        log("  Install successful (or already installed)")
+    log(f"  Install post to /install: HTTP {status}")
+    if status in (200, 302, 303):
+        log("  Install successful")
         return True
     else:
-        log(f"  Install failed: {body_str}")
+        log(f"  /install POST failed: {body_str}")
+
+    # Try install at root path
+    status2, body2 = request(gitea_url, method="POST",
+                              data=params, headers=FORM_HEADERS, timeout=30)
+    body2_str = body2.decode(errors="replace")[:200]
+    log(f"  Install post to /: HTTP {status2}")
+    if status2 in (200, 302, 303):
+        log("  Install successful at root")
+        return True
+    else:
+        log(f"  / POST failed: {body2_str}")
         return False
 
 
