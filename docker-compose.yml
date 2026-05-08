@@ -28,6 +28,7 @@ services:
       UC_URL: http://localhost:3000
       NGX_URL: http://localhost:8088
       JWT_KEY: upctl-dev-jwt-key-change-in-production
+      LOGGER_LEVEL: INFO
     ports:
       - "3000:3000"
 
