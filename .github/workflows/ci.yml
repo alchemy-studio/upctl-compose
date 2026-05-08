@@ -96,20 +96,6 @@ jobs:
 
       - name: Seed Gitea with org/repo/labels
         run: |
-          # Check Gitea container logs for startup issues
-          echo ">>> Gitea container logs:"
-          docker compose logs gitea 2>&1 | tail -40 || echo "no gitea logs"
-          # Try Gitea CLI to set up the database manually
-          echo ">>> Running Gitea migrate..."
-          docker compose exec -T gitea gitea migrate 2>&1 || echo "migrate may have failed"
-          echo ">>> Creating admin user..."
-          docker compose exec -T gitea gitea admin user create \
-            --username ai-bot --password ai-bot-dev-pass \
-            --email ai-bot@example.com --admin 2>&1 || echo "user may already exist"
-          echo ">>> Restarting Gitea to pick up changes..."
-          docker compose restart gitea
-          sleep 10
-          echo ">>> Setting up org, repo, and labels via API..."
           docker compose cp scripts/setup-gitea.py ai-agent:/app/setup-gitea.py
           docker compose exec -T ai-agent python3 /app/setup-gitea.py
 
