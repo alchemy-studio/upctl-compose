@@ -40,6 +40,8 @@ function generateJwt(): string {
 
 async function injectAuth(page: Page) {
   const jwt = generateJwt();
+  // Must be on the target origin before accessing localStorage
+  await page.goto(`${BASE_URL}/login`);
   await page.evaluate((token) => {
     window.localStorage.setItem("Authorization", token);
   }, jwt);
