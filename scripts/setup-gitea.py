@@ -95,7 +95,7 @@ def main():
     working_url = None
     for url in GITEA_URLS:
         log(f"Trying {url}...")
-        if wait_for_gitea(url, retries=5):
+        if wait_for_gitea(url, max_retries=5):
             working_url = url
             break
 
