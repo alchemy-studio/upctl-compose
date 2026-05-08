@@ -75,7 +75,7 @@ def main():
         if status in (200, 302):
             body_str = body.decode(errors="replace")[:200]
             log(f"  Gitea reachable (HTTP {status})")
-            if "Installation" in body_str or "install" in body_str.lower():
+            if "Installation" in body_str:
                 log("  Install page detected, submitting install form...")
                 # Submit install form at {GITEA_INSTALL_BASE}/install
                 params = urllib.parse.urlencode({
