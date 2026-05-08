@@ -279,6 +279,51 @@ def test_full_pipeline():
         check("Full pipeline", False, str(e))
 
 
+def test_real_pipeline():
+    """Real pipeline test: create approved ticket → pick_and_process() → verify closure."""
+    print("\n📋 Real Pipeline (via pick_and_process)")
+    try:
+        sys.path.insert(0, "/app")
+        from poll_worker import pick_and_process
+
+        # Create an approved ticket
+        ticket = api_post("/tickets", {
+            "title": "E2E real pipeline: echo hello via pick_and_process",
+            "body": "Please reply with exactly: REAL-PIPE-OK",
+            "labels": ["approved"],
+        })
+        num = ticket.get("number") or (ticket.get("d", {}) if isinstance(ticket, dict) else {}).get("number", 0)
+        check("Create pipeline ticket", num > 0, f"got number={num}")
+        if num == 0:
+            return
+        log(f"Pipeline ticket #{num} created")
+
+        # Call the actual poll_worker function — this is the full production path:
+        # list approved → add in_progress label → call DeepSeek → post comment → close
+        result = pick_and_process()
+        check("pick_and_process executed", True)
+
+        # Verify ticket is closed
+        import requests
+        resp = requests.get(f"{GITEA_API_BASE}/tickets/{num}", headers=HEADERS, timeout=15)
+        ticket_wrapper = resp.json()
+        ticket_data = ticket_wrapper.get("d", {})
+        issue = ticket_data.get("issue", ticket_data)  # wrapped: d.issue; fallback: d
+        state = issue.get("state")
+        is_closed = state == "closed"
+        check("Ticket closed after pipeline", is_closed, f"state={state}")
+
+        # Comments are embedded in the ticket response d.comments
+        comments = ticket_data.get("comments", [])
+        n_comments = len(comments) if isinstance(comments, list) else 0
+        check("Has processing comments", n_comments > 0, f"got {n_comments} comments")
+
+        log(f"Pipeline ticket #{num} verified closed")
+
+    except Exception as e:
+        check("Real pipeline", False, str(e))
+
+
 def main():
     print("=" * 60)
     print("upctl-compose E2E Test Suite")
@@ -304,6 +349,7 @@ def main():
     # Step 6: Full pipeline (requires DeepSeek + poll worker)
     if os.path.exists("/app/deepseek_agent.py") and os.path.exists("/app/poll_worker.py"):
         test_full_pipeline()
+        test_real_pipeline()
 
     # Summary
     total = PASS + FAIL

@@ -44,6 +44,8 @@ services:
       GITEA_API_BASE: http://gitea:3000/api/v1
       GITEA_AUTH_HEADER: "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw=="
       JWT_KEY: upctl-dev-jwt-key-change-in-production
+      no_proxy: "localhost,127.0.0.1,gitea,upctl-svc,postgres,authcore,host.docker.internal"
+      NO_PROXY: "localhost,127.0.0.1,gitea,upctl-svc,postgres,authcore,host.docker.internal"
     ports:
       - "3005:3005"
     volumes:
@@ -72,6 +74,8 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_API_BASE: ${DEEPSEEK_API_BASE:-https://api.deepseek.com}
       DEFAULT_MODEL: ${DEFAULT_MODEL:-deepseek-v4-flash}
+      no_proxy: "localhost,127.0.0.1,gitea,upctl-svc,postgres,authcore,host.docker.internal"
+      NO_PROXY: "localhost,127.0.0.1,gitea,upctl-svc,postgres,authcore,host.docker.internal"
     volumes:
       - agent-workspace:/app/workspace
 

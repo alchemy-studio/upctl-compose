@@ -86,7 +86,13 @@ def list_approved_issues() -> list[dict]:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.raise_for_status()
         data = resp.json()
-        raw = data if isinstance(data, list) else data.get("d", [])
+        # upctl-svc returns {"r": true, "d": {"tickets": [...]}}
+        # Or direct list from older API versions
+        if isinstance(data, list):
+            raw = data
+        else:
+            d = data.get("d", {})
+            raw = d if isinstance(d, list) else d.get("tickets", [])
         if not isinstance(raw, list):
             log(f"Unexpected response format: {type(raw)}")
             return []
