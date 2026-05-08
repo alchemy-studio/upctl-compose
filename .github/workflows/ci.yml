@@ -85,7 +85,7 @@ jobs:
 
       - name: Start built services
         run: |
-          docker compose up -d authcore upctl-svc upctl-web
+          docker compose up -d --no-build authcore upctl-svc upctl-web
           docker compose logs --tail=20 authcore upctl-svc upctl-web
 
       - name: Wait for authcore (30s timeout)

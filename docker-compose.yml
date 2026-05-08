@@ -17,6 +17,7 @@ services:
       retries: 10
 
   authcore:
+    image: authcore:ci
     build:
       context: ./authcore
     depends_on:
@@ -32,6 +33,7 @@ services:
       - "3000:3000"
 
   upctl-svc:
+    image: upctl-svc:ci
     build:
       context: ./upctl-svc
     depends_on:
@@ -47,6 +49,7 @@ services:
       - uploads:/app/uploads
 
   upctl-web:
+    image: upctl-web:ci
     build:
       context: ./upctl-web
     depends_on:
