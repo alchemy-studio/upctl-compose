@@ -70,7 +70,7 @@ def generate_jwt() -> str:
 
 JWT_TOKEN = generate_jwt()
 HEADERS = {
-    "Authorization": f"Bearer {JWT_TOKEN}",
+    "Authorization": JWT_TOKEN,
     "Content-Type": "application/json",
     "Accept": "application/json",
 }
