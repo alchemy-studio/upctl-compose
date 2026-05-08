@@ -56,6 +56,21 @@ services:
     ports:
       - "8088:80"
 
+  ai-agent:
+    build:
+      context: ./ai-agent
+    depends_on:
+      upctl-svc:
+        condition: service_started
+    environment:
+      GITEA_API_BASE: http://upctl-svc:3005/api/v2/ts
+      GITEA_AUTH_HEADER: "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw=="
+      POLL_INTERVAL: "300"
+      # DEEPSEEK_API_KEY: set via GitHub secret or .env
+      # DEEPSEEK_API_BASE: https://api.deepseek.com (default)
+    volumes:
+      - agent-workspace:/app/workspace
+
   gitea:
     image: gitea/gitea:1.22
     environment:
@@ -88,3 +103,4 @@ volumes:
   pgdata:
   gitea:
   uploads:
+  agent-workspace:
