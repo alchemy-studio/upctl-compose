@@ -40,7 +40,7 @@ services:
         condition: service_started
     environment:
       UPCTL_PORT: "3005"
-      GITEA_API_BASE: http://gitea:3000/gitea/api/v1
+      GITEA_API_BASE: http://gitea:3000/api/v1
       GITEA_AUTH_HEADER: "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw=="
     ports:
       - "3005:3005"

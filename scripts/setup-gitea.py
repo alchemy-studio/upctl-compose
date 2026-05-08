@@ -29,7 +29,7 @@ FORM_HEADERS = {
 
 GITEA_BASE = "http://gitea:3000"  # Root URL for install page (before install)
 GITEA_INSTALL_BASE = "http://gitea:3000/gitea"  # Install form action (at sub-path)
-GITEA_API_BASE = "http://gitea:3000/gitea/api/v1"  # API URL (after install, sub-path)
+GITEA_API_BASE = "http://gitea:3000/api/v1"  # API URL (Gitea serves API at root, not sub-path)
 
 
 def log(msg):
