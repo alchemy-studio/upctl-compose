@@ -234,6 +234,51 @@ def test_ai_agent_poll_worker():
         check("Poll worker modules load", False, str(e))
 
 
+def test_full_pipeline():
+    """End-to-end pipeline test: create ticket → process via AI → close."""
+    print("\n📋 Full Pipeline (create → process → close)")
+    ticket_num = 0
+    try:
+        sys.path.insert(0, "/app")
+        from poll_worker import pick_and_process
+        from deepseek_agent import ask
+
+        # Step 1: Create an approved ticket
+        ticket = api_post("/tickets", {
+            "title": "E2E pipeline test: echo hello",
+            "body": "Please reply with exactly: PIPE-E2E-OK",
+            "labels": ["approved"],
+        })
+        num = ticket.get("number") or (ticket.get("d", {}) if isinstance(ticket, dict) else {}).get("number", 0)
+        check("Create pipeline ticket", num > 0, f"got number={num}")
+        if num == 0:
+            return
+        ticket_num = num
+        log(f"Pipeline ticket #{num} created")
+
+        # Step 2: Process via DeepSeek (simulating what pick_and_process does)
+        resp = ask(f"Process ticket #{num}: reply with exactly PIPE-E2E-OK")
+        check("DeepSeek processes ticket", "PIPE-E2E-OK" in resp, f"got: {resp[:80]!r}")
+
+        # Step 3: Post result as comment
+        from poll_worker import jwt_headers
+        jwt_headers()  # initialize
+        import requests
+        comment_url = f"{GITEA_API_BASE}/tickets/{num}/comments"
+        comment_resp = requests.post(comment_url, json={
+            "body": f"## Pipeline Test Result\n\n{resp}\n\n---\n*E2E Pipeline Test*"
+        }, headers=HEADERS, timeout=15)
+        check("Post pipeline comment", comment_resp.ok, f"status={comment_resp.status_code}")
+
+        # Step 4: Close the ticket
+        close_resp = api_post(f"/tickets/{num}/close", {})
+        check("Close pipeline ticket", True)
+        log(f"Pipeline ticket #{num} completed")
+
+    except Exception as e:
+        check("Full pipeline", False, str(e))
+
+
 def main():
     print("=" * 60)
     print("upctl-compose E2E Test Suite")
@@ -248,13 +293,17 @@ def main():
     # Step 3: Ticket CRUD
     test_create_and_close_ticket()
 
-    # Step 3: DeepSeek API
+    # Step 4: DeepSeek API
     if os.path.exists("/app/deepseek_agent.py"):
         test_deepseek_processing()
 
-    # Step 4: Poll worker
+    # Step 5: Poll worker
     if os.path.exists("/app/poll_worker.py"):
         test_ai_agent_poll_worker()
+
+    # Step 6: Full pipeline (requires DeepSeek + poll worker)
+    if os.path.exists("/app/deepseek_agent.py") and os.path.exists("/app/poll_worker.py"):
+        test_full_pipeline()
 
     # Summary
     total = PASS + FAIL

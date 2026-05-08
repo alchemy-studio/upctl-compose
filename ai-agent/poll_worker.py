@@ -8,6 +8,8 @@ import os
 import sys
 import time
 import json
+import hmac
+import base64
 import subprocess
 from datetime import datetime, timezone
 
@@ -15,11 +17,61 @@ import requests
 
 GITEA_API_BASE = os.environ.get("GITEA_API_BASE", "http://upctl-svc:3005/api/v2/ts")
 GITEA_AUTH = os.environ.get("GITEA_AUTH_HEADER", "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw==")
+JWT_KEY = os.environ.get("JWT_KEY", "upctl-dev-jwt-key-change-in-production")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "300"))  # 5 min
 HEADERS = {"Authorization": GITEA_AUTH, "Accept": "application/json"}
 
 SESSION_NAME = "deepseek-agent"
 WORK_DIR = "/app/workspace"
+
+
+def generate_jwt() -> str:
+    """Generate a JWT with ADMIN role for upctl-svc HtyToken auth."""
+    hty_token = {
+        "token_id": "poll-worker",
+        "hty_id": None,
+        "app_id": None,
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+        "roles": [{"role_key": "ADMIN"}],
+        "tags": [],
+        "current_org_id": None,
+        "current_org_role_keys": None,
+        "current_department_id": None,
+    }
+    now = int(time.time())
+    payload = {
+        "sub": json.dumps(hty_token),
+        "exp": now + 3600,
+        "iat": now,
+    }
+    header_b64 = base64.urlsafe_b64encode(
+        json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
+    ).rstrip(b"=").decode()
+    payload_b64 = base64.urlsafe_b64encode(
+        json.dumps(payload).encode()
+    ).rstrip(b"=").decode()
+    sig = hmac.new(
+        JWT_KEY.encode(),
+        f"{header_b64}.{payload_b64}".encode(),
+        "sha256",
+    ).digest()
+    sig_b64 = base64.urlsafe_b64encode(sig).rstrip(b"=").decode()
+    return f"{header_b64}.{payload_b64}.{sig_b64}"
+
+
+_JWT_HEADERS = None
+
+
+def jwt_headers() -> dict:
+    """Get headers with JWT auth (lazily generated, with hourly refresh)."""
+    global _JWT_HEADERS
+    if _JWT_HEADERS is None:
+        _JWT_HEADERS = {
+            "Authorization": generate_jwt(),
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+    return _JWT_HEADERS
 
 
 def log(msg: str):
@@ -34,10 +86,14 @@ def list_approved_issues() -> list[dict]:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.raise_for_status()
         data = resp.json()
-        issues = data if isinstance(data, list) else data.get("d", [])
+        raw = data if isinstance(data, list) else data.get("d", [])
+        if not isinstance(raw, list):
+            log(f"Unexpected response format: {type(raw)}")
+            return []
         return [
-            i for i in issues
-            if i.get("state") == "open"
+            i for i in raw
+            if isinstance(i, dict)
+            and i.get("state") == "open"
             and any(l.get("name") == "approved" for l in i.get("labels", []))
         ]
     except Exception as e:
@@ -46,10 +102,10 @@ def list_approved_issues() -> list[dict]:
 
 
 def add_label(issue_num: int, label_id: int = 12):
-    """Add label (default: 12 = in_progress)."""
+    """Add label (default: 12 = in_progress). Uses JWT auth."""
     url = f"{GITEA_API_BASE}/tickets/{issue_num}/labels"
     try:
-        resp = requests.post(url, json={"labels": [label_id]}, headers=HEADERS, timeout=15)
+        resp = requests.post(url, json={"labels": [label_id]}, headers=jwt_headers(), timeout=15)
         log(f"add_label #{issue_num}: {resp.status_code}")
     except Exception as e:
         log(f"add_label #{issue_num} failed: {e}")
@@ -58,7 +114,7 @@ def add_label(issue_num: int, label_id: int = 12):
 def remove_label(issue_num: int, label_id: int = 12):
     url = f"{GITEA_API_BASE}/tickets/{issue_num}/labels/{label_id}"
     try:
-        resp = requests.delete(url, headers=HEADERS, timeout=15)
+        resp = requests.delete(url, headers=jwt_headers(), timeout=15)
         log(f"remove_label #{issue_num}: {resp.status_code}")
     except Exception as e:
         log(f"remove_label #{issue_num} failed: {e}")
@@ -78,7 +134,7 @@ def add_comment(issue_num: int, body: str):
 def close_issue(issue_num: int):
     url = f"{GITEA_API_BASE}/tickets/{issue_num}/close"
     try:
-        resp = requests.post(url, headers=HEADERS, timeout=15)
+        resp = requests.post(url, headers=jwt_headers(), timeout=15)
         log(f"close #{issue_num}: {resp.status_code}")
         return resp.ok
     except Exception as e:
