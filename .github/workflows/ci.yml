@@ -96,7 +96,8 @@ jobs:
 
       - name: Seed Gitea with org/repo/labels
         run: |
-          bash scripts/setup-gitea.sh
+          docker compose cp scripts/setup-gitea.py ai-agent:/app/setup-gitea.py
+          docker compose exec -T ai-agent python3 /app/setup-gitea.py
 
       - name: E2E test — full ticket lifecycle
         env:
