@@ -1,6 +1,6 @@
 FROM rust:slim-bookworm AS builder
 
-RUN apt-get update && apt-get install -y libpq-dev pkg-config && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libpq-dev pkg-config git && rm -rf /var/lib/apt/lists/*
 
 # Install diesel CLI for migration management
 RUN cargo install diesel_cli --no-default-features --features postgres
