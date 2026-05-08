@@ -32,6 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Mask secrets in logs
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: echo "::add-mask::$DEEPSEEK_API_KEY"
+
       - name: Start dependencies (postgres + gitea)
         run: |
           docker compose up -d postgres gitea
@@ -44,9 +49,12 @@ jobs:
           done
 
       - name: Start built services
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEFAULT_MODEL: ${{ secrets.DEFAULT_MODEL }}
         run: |
-          docker compose up -d authcore upctl-svc upctl-web
-          docker compose logs --tail=20 authcore upctl-svc upctl-web
+          docker compose up -d authcore upctl-svc upctl-web ai-agent
+          docker compose logs --tail=20 authcore upctl-svc upctl-web ai-agent
 
       - name: Wait for authcore (30s timeout)
         run: |
@@ -80,6 +88,20 @@ jobs:
           result=$(curl -sf http://localhost:3005/)
           echo "upctl-svc: $result"
           test "$result" = "upctl-svc"
+
+      - name: Smoke test — ai-agent connected to DeepSeek API
+        env:
+          DEFAULT_MODEL: ${{ secrets.DEFAULT_MODEL }}
+        run: |
+          docker compose exec -T ai-agent python3 -c "
+from deepseek_agent import ask
+try:
+    resp = ask('Say hello in one word')
+    print(f'ai-agent: DeepSeek API OK, response={repr(resp)}')
+except Exception as e:
+    print(f'ai-agent: DeepSeek API ERROR — {e}')
+    exit(1)
+"
 
       - name: Cleanup
         if: always()

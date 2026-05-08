@@ -66,8 +66,9 @@ services:
       GITEA_API_BASE: http://upctl-svc:3005/api/v2/ts
       GITEA_AUTH_HEADER: "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw=="
       POLL_INTERVAL: "300"
-      # DEEPSEEK_API_KEY: set via GitHub secret or .env
-      # DEEPSEEK_API_BASE: https://api.deepseek.com (default)
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_API_BASE: ${DEEPSEEK_API_BASE:-https://api.deepseek.com}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-deepseek-v4-flash}
     volumes:
       - agent-workspace:/app/workspace
 

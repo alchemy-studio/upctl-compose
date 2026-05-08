@@ -4,7 +4,7 @@ DeepSeek agent module — interacts with DeepSeek API (OpenAI-compatible).
 import os
 from openai import OpenAI
 
-DEFAULT_MODEL = "deepseek-chat"  # DeepSeek V4
+DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-flash")
 
 _client: OpenAI | None = None
 
