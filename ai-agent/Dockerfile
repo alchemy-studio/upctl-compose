@@ -14,7 +14,7 @@ COPY requirements.txt /tmp/
 RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm /tmp/requirements.txt
 
 # Copy agent scripts
-COPY deepseek_agent.py poll_worker.py entrypoint.sh /app/
+COPY deepseek_agent.py poll_worker.py test_deepseek.py entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
 
 WORKDIR /app/workspace

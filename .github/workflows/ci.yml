@@ -92,16 +92,7 @@ jobs:
       - name: Smoke test — ai-agent connected to DeepSeek API
         env:
           DEFAULT_MODEL: ${{ secrets.DEFAULT_MODEL }}
-        run: |
-          docker compose exec -T ai-agent python3 -c "
-from deepseek_agent import ask
-try:
-    resp = ask('Say hello in one word')
-    print(f'ai-agent: DeepSeek API OK, response={repr(resp)}')
-except Exception as e:
-    print(f'ai-agent: DeepSeek API ERROR — {e}')
-    exit(1)
-"
+        run: docker compose exec -T ai-agent python3 /app/test_deepseek.py
 
       - name: Cleanup
         if: always()
