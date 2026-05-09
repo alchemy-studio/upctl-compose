@@ -3,9 +3,7 @@ import * as crypto from "crypto";
 
 const BASE_URL = "http://localhost:8088";
 
-/**
- * Generate a JWT matching the dev JWT_KEY used in docker-compose.
- */
+/** Generate a dev JWT (fallback for non-login test scenarios). */
 function generateJwt(): string {
   const jwtKey = process.env.JWT_KEY || "upctl-dev-jwt-key-change-in-production";
   const htyToken = {
@@ -38,13 +36,14 @@ function generateJwt(): string {
   return `${header}.${body}.${sig}`;
 }
 
-async function injectAuth(page: Page) {
-  const jwt = generateJwt();
-  // Must be on the target origin before accessing localStorage
+/** Log in via the username/password form and wait for redirect to /. */
+async function loginViaForm(page: Page, username = "demo", password = "demo123") {
   await page.goto(`${BASE_URL}/login`);
-  await page.evaluate((token) => {
-    window.localStorage.setItem("Authorization", token);
-  }, jwt);
+  await page.waitForSelector('input[placeholder="用户名"]');
+  await page.locator('input[placeholder="用户名"]').fill(username);
+  await page.locator('input[placeholder="密码"]').fill(password);
+  await page.locator('button:has-text("登录")').click();
+  await page.waitForURL('**/');
 }
 
 test.describe("Login page", () => {
@@ -59,16 +58,24 @@ test.describe("Login page", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("shows union_id input form (compose/dev mode)", async ({ page }) => {
+  test("shows username/password login form (compose/dev mode)", async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
-    await expect(page.locator("input")).toBeVisible();
+    await expect(page.locator('input[placeholder="用户名"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="密码"]')).toBeVisible();
     await expect(page.locator('button:has-text("登录")')).toBeVisible();
+  });
+
+  test("logs in with demo credentials and lands on ticket list", async ({ page }) => {
+    await loginViaForm(page);
+    // After successful login should redirect to /
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.locator("h1")).toContainText("工单列表");
   });
 });
 
 test.describe("Ticket list", () => {
-  test("loads and shows tickets with valid JWT", async ({ page }) => {
-    await injectAuth(page);
+  test("loads and shows tickets with valid login", async ({ page }) => {
+    await loginViaForm(page);
     await page.goto(`${BASE_URL}/`);
     await expect(page.locator("h1")).toContainText("工单列表");
     // Should not redirect back to /login

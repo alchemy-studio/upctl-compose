@@ -8,6 +8,9 @@ RUN cargo install diesel_cli --no-default-features --features postgres
 WORKDIR /app
 RUN git clone --depth 1 https://github.com/alchemy-studio/AuthCore.git .
 
+# Patch: bind to 0.0.0.0 so other containers can reach authcore
+RUN sed -i 's/127, 0, 0, 1/0, 0, 0, 0/g' htycommons/src/web.rs
+
 # Build the htyuc binary (the auth server)
 RUN cargo build --release -p htyuc
 
@@ -17,6 +20,9 @@ RUN apt-get update && apt-get install -y libpq-dev ca-certificates postgresql-cl
 COPY --from=builder /app/target/release/htyuc /usr/local/bin/
 COPY --from=builder /usr/local/cargo/bin/diesel /usr/local/bin/
 COPY --from=builder /app/htyuc_models/migrations /app/migrations
+
+# Seed data for dev mode
+COPY seed /app/seed
 
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh

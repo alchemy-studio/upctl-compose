@@ -70,7 +70,7 @@
       \node[svc, fill=teal!15] (gitea) at (4, 1) {Gitea};
       \node[svc, fill=yellow!15] (pg) at (-4, -0.5) {PostgreSQL};
       \node[svc, fill=red!15] (ai) at (0, -0.5) {ai-agent};
-      \node[draw, dashed, rounded corners, minimum width=1.8cm, minimum height=0.4cm, font=\tiny] (ds) at (0, -2) {DeepSeek};
+      \node[draw, dashed, rounded corners, minimum width=2cm, minimum height=0.4cm, font=\tiny] (ds) at (0, -2) {deepseek-tui};
       \draw[->,thick] (web) -- (nginx);
       \draw[->,thick] (nginx) -- (auth);
       \draw[->,thick] (nginx) -- (svc);
@@ -78,11 +78,11 @@
       \draw[->,thick] (svc) -- (gitea);
       \draw[->,thick] (ai) -- (svc);
       \draw[->,thick] (auth) -- (pg);
-      \draw[->,thick,dashed] (ai) -- (ds);
-      \node[font=\tiny, right] at (nginx.east) {:8088};
-      \node[font=\tiny, right] at (auth.east) {:3000};
-      \node[font=\tiny, right] at (svc.east) {:3005};
-      \node[font=\tiny, right] at (gitea.east) {:3001};
+      \draw[->,thick,dashed] (ai) -- (ds) node[midway, right, font=\tiny] {tmux};
+      \node[font=\tiny, right] at ([yshift=2pt]nginx.east) {:8088};
+      \node[font=\tiny, right] at ([yshift=2pt]auth.east) {:3000};
+      \node[font=\tiny, right] at ([yshift=2pt]svc.east) {:3005};
+      \node[font=\tiny, right] at ([yshift=2pt]gitea.east) {:3001};
     \end{tikzpicture}
   \end{center}
   \vspace{2pt}
@@ -96,7 +96,7 @@
       authcore & 3000 & 身份认证，JWT 签发 \\
       upctl-svc & 3005 & 工单 CRUD API \\
       upctl-web & (nginx 内) & Vue 3 前端 \\
-      ai-agent & --- & 轮询+调用 DeepSeek 处理 \\
+      ai-agent & --- & 轮询 Gitea + tmux 托管 deepseek-tui \\
       Gitea & 3001 & 代码托管+工单+CI \\
       PostgreSQL & 5432 & 数据库 \\
       \bottomrule
@@ -110,7 +110,7 @@
       \tikzset{block/.style={rectangle, draw, rounded corners, minimum width=1.3cm, minimum height=0.4cm, align=center, font=\tiny}}
       \node[block, fill=green!20] (poll) {轮询 approved};
       \node[block, fill=blue!20, right=of poll] (label) {加 in\_progress};
-      \node[block, fill=orange!20, right=of label] (llm) {DeepSeek};
+      \node[block, fill=orange!20, right=of label] (llm) {deepseek-tui};
       \node[block, fill=purple!20, below=of llm] (comment) {评论结果};
       \node[block, fill=gray!20, left=of comment] (remove) {移除 label};
       \node[block, fill=red!20, left=of remove] (close) {关闭};
@@ -125,7 +125,7 @@
   \vspace{2pt}
   \begin{exampleblock}{关键特征}
     \footnotesize
-    每 5 分钟轮询 {\small |} tmux 运行时 {\small |} 自动评论回复
+    每 5 分钟轮询 {\small |} tmux 托管 deepseek-tui {\small |} 自动评论并关闭
   \end{exampleblock}
 \end{frame}
 
@@ -254,12 +254,13 @@ curl -sf localhost:3000/   # AuthCore
     \column{0.55\textwidth}
     访问 \url{http://localhost:8088}
     \begin{itemize}
-      \item 开发模式显示 union\_id 输入框
-      \item 输入任意值生成 JWT
+      \item 开发模式显示用户名密码登录表单
+      \item 使用 \texttt{demo / demo123} 登录
+      \item AuthCore 验证后直接签发 JWT
       \item 登录后跳转工单列表
     \end{itemize}
     \vspace{4pt}
-    \textcolor{myblue}{认证流程：} 前端 $\to$ nginx $\to$ authcore $\to$ JWT
+    \textcolor{myblue}{认证流程：} 前端 $\to$ nginx $\to$ authcore 验证密码 $\to$ JWT
 
     \column{0.43\textwidth}
     \includegraphics[width=\textwidth]{screenshots/01-login-page.png}
@@ -332,7 +333,7 @@ curl -sf localhost:3000/   # AuthCore
       \tiny
       Processing issue \#18: test\\
       add\_label \#18: 200\\
-      DeepSeek response (18 chars)\\
+      deepseek-tui response (18 chars)\\
       add\_comment \#18: 200\\
       close \#18: 200 -- completed
     \end{block}
@@ -404,7 +405,7 @@ curl -sf localhost:3000/   # AuthCore
   \small
   \texttt{pipeline.spec.ts} 6 步模拟真实操作：
   \begin{enumerate}
-    \item 生成 JWT $\to$ 注入浏览器 localStorage
+    \item 用户名密码表单登录获取 JWT
     \item fetch 创建 approved 工单
     \item 导航详情页，验证待处理
     \item 触发 pick\_and\_process()
@@ -456,7 +457,9 @@ curl -sf localhost:3000/   # AuthCore
       \item 创建工单，标记 \texttt{approved}
       \item ai-agent 每 5min 轮询 Gitea API
       \item 发现 \texttt{approved} 工单 $\to$ 加 \texttt{in\_progress}
-      \item 调用 DeepSeek API 处理内容
+      \item tmux send-keys 注入工单内容到 \texttt{deepseek-tui} 对话
+      \item deepseek-tui 与 \texttt{api.deepseek.com} 交互生成回复
+      \item tmux capture-pane 读取回复内容
       \item 评论结果到工单
       \item 移除 \texttt{in\_progress} + 关闭工单
     \end{enumerate}
@@ -493,7 +496,7 @@ curl -sf localhost:3000/   # AuthCore
     \end{block}
   \end{columns}
   \vspace{4pt}
-  \textcolor{myblue}{关键技术：} Python 轮询 + tmux session + Gitea API (Basic Auth) + DeepSeek API
+  \textcolor{myblue}{关键技术：} Python 轮询 | tmux send-keys 注入 | deepseek-tui CLI | Gitea API
 \end{frame}
 
 % ============================================
@@ -542,10 +545,12 @@ curl -sf localhost:3000/   # AuthCore
   \begin{center}
     \vspace{3cm}
     {\Huge \textcolor{myblue}{\textbf{Thank You}}}
-    \vspace{1.2cm}
+
+    \vspace{2cm}
     {\Large \textbf{鉬馨玥翼}}
-    \vspace{0.5cm}
-    {\large \url{https://github.com/alchemy-studio/upctl-compose}}
+
+    \vspace{0.8cm}
+    {\Large \url{https://github.com/alchemy-studio/upctl-compose}}
   \end{center}
 \end{frame}
 
