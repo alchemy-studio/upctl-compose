@@ -64,7 +64,7 @@ test.describe("Full pipeline", () => {
         return data?.d?.number || 0;
       },
       {
-        url: `${BASE_URL}/api/v2/ts/tickets`,
+        url: `${BASE_URL}/api/v2/upctl/api/tickets`,
         jwt,
         title,
         body,
@@ -94,7 +94,7 @@ test.describe("Full pipeline", () => {
           const issue: Record<string, unknown> = data?.d?.issue || data?.d || {};
           return (issue.state as string) || "unknown";
         },
-        { url: `${BASE_URL}/api/v2/ts/tickets/${ticketNum}`, jwt },
+        { url: `${BASE_URL}/api/v2/upctl/api/tickets/${ticketNum}`, jwt },
       );
       if (state === "closed") {
         isClosed = true;

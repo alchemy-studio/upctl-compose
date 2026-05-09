@@ -193,7 +193,7 @@ sequenceDiagram
     NGX->>AUTH: 转发
     AUTH-->>User: JWT token
 
-    User->>NGX: GET /api/v2/ts/tickets
+    User->>NGX: GET /api/v2/upctl/api/tickets
     NGX->>SVC: 转发
     SVC->>GIT: 代理请求
     GIT-->>SVC: 工单数据
@@ -210,7 +210,7 @@ sequenceDiagram
     participant DEEPSEEK as DeepSeek API
 
     loop 每 5 分钟
-        AI->>SVC: GET /api/v2/ts/tickets
+        AI->>SVC: GET /api/v2/upctl/api/tickets
         SVC->>GIT: 查询已批准工单
         GIT-->>AI: 工单列表
         alt 有已批准的工单
@@ -229,7 +229,7 @@ sequenceDiagram
 |----------|----------|
 | `/` | Static files (upctl-web dist) |
 | `/api/v1/uc/` | `authcore:3000` |
-| `/api/v2/ts/` | `upctl-svc:3005` |
+| `/api/v2/upctl/api/` | `upctl-svc:3005` |
 | `/gitea/` | `gitea:3000` |
 
 ## Services Detail
