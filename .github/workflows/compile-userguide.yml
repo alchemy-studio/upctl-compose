@@ -1,9 +1,12 @@
 name: Compile Userguide PDF
 
-# 只在定时触发时运行，不随 PR/push 触发
 on:
   schedule:
     - cron: '0 10 * * 1'  # 每周一 10:00 UTC
+  workflow_dispatch:  # 允许手动触发
+
+permissions:
+  contents: write
 
 jobs:
   compile:
@@ -12,14 +15,21 @@ jobs:
       image: texlive/texlive:latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Compile userguide PDF
         working-directory: userguide
         run: xelatex -interaction=nonstopmode userguide.tex
 
-      - name: Upload PDF artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: userguide
-          path: userguide/userguide.pdf
-          retention-days: 30
+      - name: Commit updated PDF
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add userguide/userguide.pdf
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto-update userguide PDF"
+            git push
+          else
+            echo "No changes to commit"
+          fi
