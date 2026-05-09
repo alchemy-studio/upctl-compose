@@ -89,8 +89,8 @@ services:
       GITEA__database__NAME: gitea
       GITEA__database__USER: gitea
       GITEA__database__PASSWD: gitea_dev
-      GITEA__server__DOMAIN: localhost:8088
-      GITEA__server__ROOT_URL: http://localhost:8088/gitea/
+      GITEA__server__DOMAIN: localhost:3001
+      GITEA__server__ROOT_URL: http://localhost:3001
       GITEA__server__HTTP_PORT: 3000
       GITEA__server__SSH_PORT: 2222
       GITEA__security__SECRET_KEY: gitea-dev-secret-key

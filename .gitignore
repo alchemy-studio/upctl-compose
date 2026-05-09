@@ -2,3 +2,22 @@ node_modules/
 __pycache__/
 *.pyc
 .env
+.DS_Store
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+texput.log
+
+# Test files
+test_*.pdf
+test_*.tex
+
+# Playwright
+tests/playwright/package-lock.json
+tests/playwright/test-results/

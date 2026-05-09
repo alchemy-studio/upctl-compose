@@ -1,0 +1,552 @@
+\documentclass[10pt,aspectratio=169,utf8]{beamer}
+
+\usepackage{ctex}
+\setCJKmainfont{Songti SC}
+\setCJKsansfont{Heiti SC}
+\setCJKmonofont{Heiti SC}
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage{fontawesome5}
+\usepackage{hyperref}
+\usepackage{fancyvrb}
+
+\usetheme{Copenhagen}
+\usecolortheme{default}
+
+\definecolor{mygreen}{RGB}{34,139,34}
+\definecolor{myblue}{RGB}{0,102,204}
+\definecolor{myred}{RGB}{220,50,50}
+\definecolor{mygray}{RGB}{120,120,120}
+\definecolor{mybg}{RGB}{248,248,252}
+
+\setbeamercolor{background canvas}{bg=mybg}
+\setbeamercolor{frametitle}{bg=mybg,fg=myblue}
+\setbeamercolor{title}{fg=myblue}
+\setbeamercolor{subtitle}{fg=mygray}
+\setbeamercolor{block title}{bg=myblue,fg=white}
+\setbeamercolor{block body}{bg=white}
+\setbeamercolor{alerted text}{fg=myred}
+
+\setbeamertemplate{itemize item}{\textbullet}
+\setbeamertemplate{itemize subitem}{--}
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{section in toc}{\inserttocsectionnumber.~\inserttocsection}
+
+\DefineVerbatimEnvironment{code}{Verbatim}{fontsize=\tiny,frame=single}
+
+\title{\textbf{upctl-compose 用户手册}\\[2pt]{\normalsize 本地部署 \& 全链路 E2E 测试指南}}
+\subtitle{\small 基于 Docker Compose 的工单管理系统 -- 从部署到自动化测试}
+\author{鉬馨玥翼}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+\begin{frame}[shrink=10]{目录}
+  \tableofcontents
+\end{frame}
+
+% ============================================
+\section{系统架构}
+% ============================================
+
+\begin{frame}[shrink=10]{系统架构总览}
+  \begin{center}
+    \begin{tikzpicture}[
+      svc/.style={rectangle, draw, rounded corners, minimum width=2cm, minimum height=0.5cm, align=center, font=\tiny},
+      scale=0.65
+    ]
+      \node[svc, fill=blue!15] (web) at (0, 3.5) {upctl-web};
+      \node[svc, fill=green!15] (nginx) at (0, 2.5) {nginx};
+      \node[svc, fill=orange!15] (auth) at (-4, 1) {authcore};
+      \node[svc, fill=purple!15] (svc) at (0, 1) {upctl-svc};
+      \node[svc, fill=teal!15] (gitea) at (4, 1) {Gitea};
+      \node[svc, fill=yellow!15] (pg) at (-4, -0.5) {PostgreSQL};
+      \node[svc, fill=red!15] (ai) at (0, -0.5) {ai-agent};
+      \node[draw, dashed, rounded corners, minimum width=1.8cm, minimum height=0.4cm, font=\tiny] (ds) at (0, -2) {DeepSeek};
+      \draw[->,thick] (web) -- (nginx);
+      \draw[->,thick] (nginx) -- (auth);
+      \draw[->,thick] (nginx) -- (svc);
+      \draw[->,thick] (nginx) -- (gitea);
+      \draw[->,thick] (svc) -- (gitea);
+      \draw[->,thick] (ai) -- (svc);
+      \draw[->,thick] (auth) -- (pg);
+      \draw[->,thick,dashed] (ai) -- (ds);
+      \node[font=\tiny, right] at (nginx.east) {:8088};
+      \node[font=\tiny, right] at (auth.east) {:3000};
+      \node[font=\tiny, right] at (svc.east) {:3005};
+      \node[font=\tiny, right] at (gitea.east) {:3001};
+    \end{tikzpicture}
+  \end{center}
+  \vspace{2pt}
+  \begin{table}
+    \fontsize{7}{9}\selectfont
+    \begin{tabular}{lcl}
+      \toprule
+      服务 & 端口 & 作用 \\
+      \midrule
+      nginx & 8088 & 反向代理，路由到各后端 \\
+      authcore & 3000 & 身份认证，JWT 签发 \\
+      upctl-svc & 3005 & 工单 CRUD API \\
+      upctl-web & (nginx 内) & Vue 3 前端 \\
+      ai-agent & --- & 轮询+调用 DeepSeek 处理 \\
+      Gitea & 3001 & 代码托管+工单+CI \\
+      PostgreSQL & 5432 & 数据库 \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+\end{frame}
+
+\begin{frame}[shrink=10]{AI Agent 工作流程}
+  \begin{center}
+    \begin{tikzpicture}[node distance=0.5cm, auto]
+      \tikzset{block/.style={rectangle, draw, rounded corners, minimum width=1.3cm, minimum height=0.4cm, align=center, font=\tiny}}
+      \node[block, fill=green!20] (poll) {轮询 approved};
+      \node[block, fill=blue!20, right=of poll] (label) {加 in\_progress};
+      \node[block, fill=orange!20, right=of label] (llm) {DeepSeek};
+      \node[block, fill=purple!20, below=of llm] (comment) {评论结果};
+      \node[block, fill=gray!20, left=of comment] (remove) {移除 label};
+      \node[block, fill=red!20, left=of remove] (close) {关闭};
+      \draw[->,thick] (poll) -- (label);
+      \draw[->,thick] (label) -- (llm);
+      \draw[->,thick] (llm) -- (comment);
+      \draw[->,thick] (comment) -- (remove);
+      \draw[->,thick] (remove) -- (close);
+      \draw[->,thick,dashed] ([yshift=-0.15cm]close.south) -- ++(0,-0.35) -| (poll.west);
+    \end{tikzpicture}
+  \end{center}
+  \vspace{2pt}
+  \begin{exampleblock}{关键特征}
+    \footnotesize
+    每 5 分钟轮询 {\small |} tmux 运行时 {\small |} 自动评论回复
+  \end{exampleblock}
+\end{frame}
+
+% ============================================
+\section{本地部署}
+% ============================================
+
+\begin{frame}{环境要求}
+  \small
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \textbf{软件要求}
+    \begin{itemize}
+      \item Docker 24.0+, Compose 2.24+
+      \item Git
+    \end{itemize}
+    \textbf{端口占用}\\
+    \texttt{5432} PostgreSQL \quad \texttt{3000} authcore\\
+    \texttt{3001} Gitea \quad \texttt{3005} upctl-svc\\
+    \texttt{8088} nginx \quad \texttt{2222} Gitea SSH
+
+    \column{0.48\textwidth}
+    \textbf{推荐配置}
+    \begin{itemize}
+      \item CPU 4 核 +、内存 8 GB +
+      \item 需访问 GitHub + DeepSeek API
+    \end{itemize}
+    \textcolor{myred}{\textbf{注意：}} Docker Desktop 需配置 \texttt{no\_proxy}（已内置）
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{克隆与启动}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{1. 克隆}
+      \begin{code}
+git clone https://github.com/
+  alchemy-studio/upctl-compose.git
+cd upctl-compose
+      \end{code}
+    \end{block}
+    \begin{block}{2. 启动}
+      \begin{code}
+docker compose up -d
+docker compose ps
+      \end{code}
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{启动日志}
+      \tiny
+      authcore: Running migration...\\
+      \relax\ [authcore] Starting htyuc...\\
+      数据库连接池初始化 OK\\
+      upctl-svc: starting on port 3005\\
+      ai-agent: Setting up workspace...\\
+      \relax\ Starting tmux session...
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{初始化 Gitea}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{等待 Gitea}
+      \begin{code}
+until curl -sf localhost:3001/api/v1/version
+do sleep 3; done
+      \end{code}
+    \end{block}
+    \begin{block}{初始化}
+      \begin{code}
+docker compose exec ai-agent \
+  python3 /app/setup-gitea.py
+      \end{code}
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{创建内容}
+      \footnotesize
+      组织 \texttt{weli} + 仓库 \texttt{tickets}\\
+      标签：approved(1) / in\_progress(2) / blocked(3)
+    \end{block}
+    \begin{exampleblock}{管理界面}
+      \footnotesize
+      \url{http://localhost:3001} \\
+      用户 \texttt{ai-bot / ai-bot-dev-pass}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{AI 代理配置}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{.env 文件}
+      \begin{code}
+DEEPSEEK_API_KEY=sk-your-key
+DEEPSEEK_API_BASE=https://api.deepseek.com
+DEFAULT_MODEL=deepseek-v4-flash
+      \end{code}
+    \end{block}
+    \begin{block}{重启}
+      \begin{code}
+docker compose up -d ai-agent
+      \end{code}
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{exampleblock}{验证部署}
+      \footnotesize
+      \begin{code}
+curl -sf localhost:8088/ | head -c 200
+curl -sf localhost:3005/   # upctl-svc
+curl -sf localhost:3000/   # AuthCore
+      \end{code}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+% ============================================
+\section{使用指南}
+% ============================================
+
+\begin{frame}{登录页面}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    访问 \url{http://localhost:8088}
+    \begin{itemize}
+      \item 开发模式显示 union\_id 输入框
+      \item 输入任意值生成 JWT
+      \item 登录后跳转工单列表
+    \end{itemize}
+    \vspace{4pt}
+    \textcolor{myblue}{认证流程：} 前端 $\to$ nginx $\to$ authcore $\to$ JWT
+
+    \column{0.43\textwidth}
+    \includegraphics[width=\textwidth]{screenshots/01-login-page.png}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{工单列表 \& 详情}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    \textbf{列表页：} 标签页切换 / 卡片显示标题+状态\\
+    \textbf{详情页：} 标题+编号 / 状态标签 / 评论区\\[4pt]
+    AI 处理结果格式：\\
+    \texttt{\#\# Processing result}\\
+    \texttt{\{AI 总结\}}\\
+    \texttt{--- *Processed by DeepSeek Agent*}
+
+    \column{0.43\textwidth}
+    \includegraphics[width=\textwidth]{screenshots/02-ticket-list.png}
+    \vspace{4pt}
+    \includegraphics[width=\textwidth]{screenshots/03-ticket-detail.png}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Gitea 后台}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    地址 \url{http://localhost:3001}\\
+    用户 \texttt{ai-bot / ai-bot-dev-pass}\\
+    仓库 \texttt{weli/tickets}\\[4pt]
+    标签说明：
+    \begin{itemize}
+      \item \texttt{approved} --- AI 自动处理
+      \item \texttt{in\_progress} --- 处理中
+      \item \texttt{blocked} --- 阻塞
+    \end{itemize}
+
+    \column{0.43\textwidth}
+    \includegraphics[width=\textwidth]{screenshots/04-gitea-issues.png}
+  \end{columns}
+\end{frame}
+
+% ============================================
+\section{组件日志}
+% ============================================
+
+\begin{frame}[fragile]{各组件日志解读}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{authcore 启动}
+      \tiny
+      Running migration 2022-02-14-124946\\
+      \relax Running migration 2026-05-02-082153\\
+      \relax\ [authcore] Starting htyuc...\\
+      全局数据库连接池初始化 OK
+    \end{block}
+    \begin{block}{upctl-svc}
+      \tiny
+      [upctl-svc] starting on port 3005\\
+      \relax [upctl-svc] listening on 0.0.0.0:3005
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{ai-agent 轮询}
+      \tiny
+      poll\_worker started -- interval=300s\\
+      No approved issues found.\\
+      No work. Sleeping 300s...
+    \end{block}
+    \begin{block}{ai-agent 处理}
+      \tiny
+      Processing issue \#18: test\\
+      add\_label \#18: 200\\
+      DeepSeek response (18 chars)\\
+      add\_comment \#18: 200\\
+      close \#18: 200 -- completed
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{tmux 运行时 \& 容器状态}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{tmux 调试}
+      \tiny
+      \# 进入 session\\
+      docker compose exec ai-agent \\
+      \relax\ \ tmux attach -t deepseek-agent\\
+      \# 查看输出\\
+      docker compose exec ai-agent \\
+      \relax\ \ tmux capture-pane -t deepseek-agent -p
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{docker compose ps}
+      \tiny
+      NAME                  STATUS\\
+      ai-agent   Up (healthy)\\
+      authcore   Up\\
+      gitea      Up\\
+      postgres   Up (healthy)\\
+      upctl-svc  Up\\
+      upctl-web  Up
+    \end{block}
+    \begin{alertblock}{使用 tmux send-keys 注入命令}
+      \tiny
+      可在不进入交互模式的情况下向 agent 发送命令
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+% ============================================
+\section{E2E 测试}
+% ============================================
+
+\begin{frame}{E2E 测试概览}
+  \small
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \textbf{后端测试} (tests/e2e\_test.py)
+    \begin{itemize}
+      \item 认证 (401 拒绝)
+      \item Gitea 连通性
+      \item 工单 CRUD
+      \item DeepSeek 连通性
+      \item 全流程管道
+    \end{itemize}
+
+    \column{0.48\textwidth}
+    \textbf{前端测试} (tests/playwright/)
+    \begin{itemize}
+      \item 登录页渲染
+      \item 未认证重定向
+      \item 工单列表
+      \item 全流程管道 (pipeline.spec.ts)
+    \end{itemize}
+  \end{columns}
+  \vspace{4pt}
+  \textcolor{myred}{核心：} 创建 approved 工单 $\to$ ai-agent 处理 $\to$ 评论 $\to$ 关闭 $\to$ 浏览器验证
+\end{frame}
+
+\begin{frame}[fragile]{Playwright 全流程测试}
+  \small
+  \texttt{pipeline.spec.ts} 6 步模拟真实操作：
+  \begin{enumerate}
+    \item 生成 JWT $\to$ 注入浏览器 localStorage
+    \item fetch 创建 approved 工单
+    \item 导航详情页，验证待处理
+    \item 触发 pick\_and\_process()
+    \item 轮询 API 等待 closed
+    \item 刷新验证已关闭 + 评论
+  \end{enumerate}
+  \vspace{4pt}
+  特性：超时 5 分钟 {\small |} 浏览器原生 fetch {\small |} 无 API Key 时跳过
+\end{frame}
+
+\begin{frame}[fragile]{运行 E2E 测试}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{后端}
+      \tiny
+      docker compose exec ai-agent \\
+      \relax\ \ python3 /app/e2e\_test.py
+    \end{block}
+    \column{0.48\textwidth}
+    \begin{block}{Playwright}
+      \tiny
+      cd tests/playwright \&\& npm install\\
+      npx playwright install chromium --with-deps\\
+      npx playwright test
+    \end{block}
+  \end{columns}
+  \vspace{4pt}
+  \begin{exampleblock}{执行结果}
+    \tiny
+    \$ npx playwright test\\
+    5 passed (9.8s)\\
+    \relax\ \checkmark\ redirects to /login (45ms)\\
+    \relax\ \checkmark\ renders title (44ms)\\
+    \relax\ \checkmark\ Full pipeline (9.2s)
+  \end{exampleblock}
+\end{frame}
+
+% ============================================
+\section{容器内 CI}
+% ============================================
+
+\begin{frame}{Gitea Issue 自动处理流程}
+  \small
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    本系统使用 \textbf{Gitea + ai-agent} 实现工单自动处理，无需外部 CI：
+
+    \begin{enumerate}
+      \item 创建工单，标记 \texttt{approved}
+      \item ai-agent 每 5min 轮询 Gitea API
+      \item 发现 \texttt{approved} 工单 $\to$ 加 \texttt{in\_progress}
+      \item 调用 DeepSeek API 处理内容
+      \item 评论结果到工单
+      \item 移除 \texttt{in\_progress} + 关闭工单
+    \end{enumerate}
+
+    \column{0.43\textwidth}
+    \includegraphics[width=\textwidth]{screenshots/04-gitea-issues.png}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{ai-agent 工作日志}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{启动阶段}
+      \tiny
+      Setting up workspace...\\
+      Starting tmux session...\\
+      Starting poll worker...\\
+      poll\_worker started -- interval=300s
+    \end{block}
+    \begin{block}{空闲状态}
+      \tiny
+      No approved issues found.\\
+      No work. Sleeping 300s...
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{处理工单}
+      \tiny
+      Processing issue \#18: ...\\
+      add\_label \#18: 200\\
+      DeepSeek response received (XX chars)\\
+      add\_comment \#18: 200\\
+      close \#18: 200 -- completed
+    \end{block}
+  \end{columns}
+  \vspace{4pt}
+  \textcolor{myblue}{关键技术：} Python 轮询 + tmux session + Gitea API (Basic Auth) + DeepSeek API
+\end{frame}
+
+% ============================================
+\section{故障排除}
+% ============================================
+
+\begin{frame}{常见问题}
+  \fontsize{7.5}{9.5}\selectfont
+  \begin{tabular}{p{3.5cm}p{3cm}p{5.5cm}}
+    \toprule
+    问题 & 原因 & 解决 \\
+    \midrule
+    POOL\_SIZE must be set & authcore 缺变量 & 加 POOL\_SIZE: "10" \\
+    JWT\_KEY not set & upctl-svc 缺变量 & 加 JWT\_KEY 环境变量 \\
+    Gitea API 404 & 路径错误 & 用 /api/v1/ 根路径 \\
+    前端白屏/JS 404 & 资源未构建 & docker compose build upctl-web \\
+    ai-agent 未连 DeepSeek & 缺 API Key & 配置后重启 \\
+    容器间连接失败 & Docker Desktop 代理 & 设置 no\_proxy（已内置） \\
+    Playwright 401 & JWT 格式 & ts 无 Z 后缀 \\
+    remove\_label 404 & 标签 ID & approved=1, in\_progress=2 \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{总结}
+  \begin{center}
+    \vspace{0.8cm}
+    {\Large\bfseries upctl-compose}
+    \vspace{0.2cm}
+    {\normalsize Docker Compose 一键部署的工单管理系统}
+
+    \vspace{0.3cm}
+    \begin{block}{核心能力}
+      \centering
+      \faDocker\ 6 容器一键部署 \qquad
+      \faRobot\ DeepSeek 自动处理 \qquad
+      \faCheckCircle\ Playwright 全链路测试
+    \end{block}
+
+    \vspace{0.3cm}
+    \texttt{git clone https://github.com/alchemy-studio/upctl-compose.git \&\& cd upctl-compose \&\& docker compose up -d}
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain]
+  \begin{center}
+    \vspace{3cm}
+    {\Huge \textcolor{myblue}{\textbf{Thank You}}}
+    \vspace{1.2cm}
+    {\Large \textbf{鉬馨玥翼}}
+    \vspace{0.5cm}
+    {\large \url{https://github.com/alchemy-studio/upctl-compose}}
+  \end{center}
+\end{frame}
+
+\end{document}

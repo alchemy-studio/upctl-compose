@@ -1,0 +1,2 @@
+upctl-svc-1  | [2m2026-05-08T23:33:27.331210Z[0m [32m INFO[0m [2mupctl_svc[0m[2m:[0m [upctl-svc] starting on port 3005
+upctl-svc-1  | [2m2026-05-08T23:33:27.331294Z[0m [32m INFO[0m [2mupctl_svc[0m[2m:[0m [upctl-svc] listening on 0.0.0.0:3005

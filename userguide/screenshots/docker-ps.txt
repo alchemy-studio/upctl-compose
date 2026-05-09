@@ -1,0 +1,7 @@
+NAME                        IMAGE                     COMMAND                  SERVICE     CREATED             STATUS                       PORTS
+upctl-compose-ai-agent-1    upctl-compose-ai-agent    "/app/entrypoint.sh"     ai-agent    About an hour ago   Up About an hour (healthy)   
+upctl-compose-authcore-1    upctl-compose-authcore    "entrypoint.sh"          authcore    2 hours ago         Up 2 hours                   0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+upctl-compose-gitea-1       gitea/gitea:1.22          "/usr/bin/entrypoint…"   gitea       2 hours ago         Up 2 hours                   0.0.0.0:2222->22/tcp, [::]:2222->22/tcp, 0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+upctl-compose-postgres-1    postgres:16-alpine        "docker-entrypoint.s…"   postgres    15 hours ago        Up 15 hours (healthy)        0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+upctl-compose-upctl-svc-1   upctl-compose-upctl-svc   "upctl-svc"              upctl-svc   2 hours ago         Up 2 hours                   0.0.0.0:3005->3005/tcp, [::]:3005->3005/tcp
+upctl-compose-upctl-web-1   upctl-compose-upctl-web   "/docker-entrypoint.…"   upctl-web   2 hours ago         Up 2 hours                   0.0.0.0:8088->80/tcp, [::]:8088->80/tcp
