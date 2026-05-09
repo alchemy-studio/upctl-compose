@@ -81,7 +81,7 @@ services:
       upctl-svc:
         condition: service_started
     environment:
-      GITEA_API_BASE: http://upctl-svc:3005/api/v2/ts
+      GITEA_API_BASE: http://upctl-svc:3005/api/v2/upctl/api
       GITEA_AUTH_HEADER: "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw=="
       JWT_KEY: upctl-dev-jwt-key-change-in-production
       POLL_INTERVAL: "300"

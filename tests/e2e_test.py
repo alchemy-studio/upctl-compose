@@ -23,7 +23,7 @@ import urllib.request
 import urllib.error
 
 GITEA_API_BASE = os.environ.get(
-    "GITEA_API_BASE", "http://upctl-svc:3005/api/v2/ts"
+    "GITEA_API_BASE", "http://upctl-svc:3005/api/v2/upctl/api"
 )
 
 

@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 import requests
 
-GITEA_API_BASE = os.environ.get("GITEA_API_BASE", "http://upctl-svc:3005/api/v2/ts")
+GITEA_API_BASE = os.environ.get("GITEA_API_BASE", "http://upctl-svc:3005/api/v2/upctl/api")
 GITEA_AUTH = os.environ.get("GITEA_AUTH_HEADER", "Basic YWktYm90OmFpLWJvdC1kZXYtcGFzcw==")
 JWT_KEY = os.environ.get("JWT_KEY", "upctl-dev-jwt-key-change-in-production")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "300"))  # 5 min
