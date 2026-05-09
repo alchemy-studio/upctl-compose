@@ -107,8 +107,8 @@ def list_approved_issues() -> list[dict]:
         return []
 
 
-def add_label(issue_num: int, label_id: int = 12):
-    """Add label (default: 12 = in_progress). Uses JWT auth."""
+def add_label(issue_num: int, label_id: int = 2):
+    """Add label (default: 2 = in_progress). Uses JWT auth."""
     url = f"{GITEA_API_BASE}/tickets/{issue_num}/labels"
     try:
         resp = requests.post(url, json={"labels": [label_id]}, headers=jwt_headers(), timeout=15)
@@ -117,7 +117,7 @@ def add_label(issue_num: int, label_id: int = 12):
         log(f"add_label #{issue_num} failed: {e}")
 
 
-def remove_label(issue_num: int, label_id: int = 12):
+def remove_label(issue_num: int, label_id: int = 2):
     url = f"{GITEA_API_BASE}/tickets/{issue_num}/labels/{label_id}"
     try:
         resp = requests.delete(url, headers=jwt_headers(), timeout=15)
