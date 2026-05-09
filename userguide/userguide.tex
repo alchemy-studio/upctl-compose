@@ -331,11 +331,11 @@ curl -sf localhost:3000/   # AuthCore
     \end{block}
     \begin{block}{ai-agent 处理}
       \tiny
-      Processing issue \#18: test\\
-      add\_label \#18: 200\\
-      deepseek-tui response (18 chars)\\
-      add\_comment \#18: 200\\
-      close \#18: 200 -- completed
+      Processing issue \#185: 添加dependbot\\
+      add\_label \#185: 200\\
+      DeepSeek response received (594 chars)\\
+      add\_comment \#185: 200\\
+      close \#185: 200 -- completed
     \end{block}
   \end{columns}
 \end{frame}
@@ -488,15 +488,41 @@ curl -sf localhost:3000/   # AuthCore
     \column{0.48\textwidth}
     \begin{block}{处理工单}
       \tiny
-      Processing issue \#18: ...\\
-      add\_label \#18: 200\\
-      DeepSeek response received (XX chars)\\
-      add\_comment \#18: 200\\
-      close \#18: 200 -- completed
+      Processing issue \#185: 添加dependbot\\
+      add\_label \#185: 200\\
+      DeepSeek response received (594 chars)\\
+      add\_comment \#185: 200\\
+      close \#185: 200 -- completed
     \end{block}
   \end{columns}
   \vspace{4pt}
   \textcolor{myblue}{关键技术：} Python 轮询 | tmux send-keys 注入 | deepseek-tui CLI | Gitea API
+\end{frame}
+
+\begin{frame}[fragile]{deepseek-tui 验证}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{tmux 终端}
+      \tiny
+      root@ai-agent:/app/workspace\# deepseek-tui --version\\
+      deepseek-tui (npm wrapper) v0.8.22\\
+      binary version: v0.8.22\\
+      repo: git+https://github.com/Hmbown/DeepSeek-TUI.git
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{实际运行日志}
+      \tiny
+      docker compose logs ai-agent --tail 5\\
+      {[}ai-agent{]} Setting up workspace...\\
+      {[}ai-agent{]} Starting tmux session...\\
+      {[}ai-agent{]} Starting poll worker...\\
+      {[}2026-05-09{]} poll\_worker started -- interval=300s\\
+      {[}2026-05-09{]} No work. Sleeping 300s...
+    \end{block}
+  \end{columns}
+  \vspace{4pt}
+  \textcolor{myblue}{注意：} 日志已脱敏，无密文泄露
 \end{frame}
 
 % ============================================
