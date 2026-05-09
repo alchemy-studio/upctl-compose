@@ -360,4 +360,18 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test", help="Run a specific test function (omit to run all)")
+    args = parser.parse_args()
+
+    if args.test:
+        # Run a single test function
+        fn = globals().get(f"test_{args.test}")
+        if fn is None:
+            print(f"Unknown test: {args.test}")
+            sys.exit(1)
+        fn()
+        sys.exit(0 if FAIL == 0 else 1)
+    else:
+        sys.exit(main())

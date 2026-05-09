@@ -102,15 +102,44 @@ jobs:
           docker compose cp scripts/setup-gitea.py ai-agent:/app/setup-gitea.py
           docker compose exec -T ai-agent python3 /app/setup-gitea.py
 
-      - name: E2E test — full ticket lifecycle
+      - name: Copy test file to ai-agent
+        run: docker compose cp tests/e2e_test.py ai-agent:/app/e2e_test.py
+
+      - name: E2E — Authentication
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           DEFAULT_MODEL: ${{ secrets.DEFAULT_MODEL }}
-        run: |
-          docker compose cp tests/e2e_test.py ai-agent:/app/e2e_test.py
-          docker compose exec -T ai-agent python3 /app/e2e_test.py
+        run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test auth
+
+      - name: E2E — Gitea connectivity
+        run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test gitea_connectivity
+
+      - name: E2E — Ticket CRUD
+        run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test create_and_close_ticket
+
+      - name: E2E — DeepSeek API
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEFAULT_MODEL: ${{ secrets.DEFAULT_MODEL }}
+        run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test deepseek_processing
+
+      - name: E2E — Poll worker modules
+        run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test ai_agent_poll_worker
+
+      - name: E2E — Full pipeline (create → DeepSeek → comment → close)
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEFAULT_MODEL: ${{ secrets.DEFAULT_MODEL }}
+        run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test full_pipeline
+
+      - name: E2E — Real pipeline via pick_and_process
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEFAULT_MODEL: ${{ secrets.DEFAULT_MODEL }}
+        run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test real_pipeline
 
       - name: E2E frontend tests (Playwright)
+        if: github.event_name == 'workflow_dispatch'
         working-directory: tests/playwright
         run: |
           npm install
