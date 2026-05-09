@@ -38,7 +38,7 @@
 
 \DefineVerbatimEnvironment{code}{Verbatim}{fontsize=\tiny,frame=single}
 
-\title{\textbf{upctl-compose 用户手册}\\[2pt]{\normalsize 本地部署 \& 全链路 E2E 测试指南}}
+\title{\textbf{upctl-compose 用户手册}\\[2pt]{\normalsize 本地部署 \& AI Agent 自动处理指南}}
 \subtitle{\small 基于 Docker Compose 的工单管理系统 -- 从部署到自动化测试}
 \author{鉬馨玥翼}
 \date{\today}
@@ -369,78 +369,6 @@ curl -sf localhost:3000/   # AuthCore
       可在不进入交互模式的情况下向 agent 发送命令
     \end{alertblock}
   \end{columns}
-\end{frame}
-
-% ============================================
-\section{E2E 测试}
-% ============================================
-
-\begin{frame}{E2E 测试概览}
-  \small
-  \begin{columns}[T]
-    \column{0.48\textwidth}
-    \textbf{后端测试} (tests/e2e\_test.py)
-    \begin{itemize}
-      \item 认证 (401 拒绝)
-      \item Gitea 连通性
-      \item 工单 CRUD
-      \item DeepSeek 连通性
-      \item 全流程管道
-    \end{itemize}
-
-    \column{0.48\textwidth}
-    \textbf{前端测试} (tests/playwright/)
-    \begin{itemize}
-      \item 登录页渲染
-      \item 未认证重定向
-      \item 工单列表
-      \item 全流程管道 (pipeline.spec.ts)
-    \end{itemize}
-  \end{columns}
-  \vspace{4pt}
-  \textcolor{myred}{核心：} 创建 approved 工单 $\to$ ai-agent 处理 $\to$ 评论 $\to$ 关闭 $\to$ 浏览器验证
-\end{frame}
-
-\begin{frame}[fragile]{Playwright 全流程测试}
-  \small
-  \texttt{pipeline.spec.ts} 6 步模拟真实操作：
-  \begin{enumerate}
-    \item 用户名密码表单登录获取 JWT
-    \item fetch 创建 approved 工单
-    \item 导航详情页，验证待处理
-    \item 触发 pick\_and\_process()
-    \item 轮询 API 等待 closed
-    \item 刷新验证已关闭 + 评论
-  \end{enumerate}
-  \vspace{4pt}
-  特性：超时 5 分钟 {\small |} 浏览器原生 fetch {\small |} 无 API Key 时跳过
-\end{frame}
-
-\begin{frame}[fragile]{运行 E2E 测试}
-  \begin{columns}[T]
-    \column{0.48\textwidth}
-    \begin{block}{后端}
-      \tiny
-      docker compose exec ai-agent \\
-      \relax\ \ python3 /app/e2e\_test.py
-    \end{block}
-    \column{0.48\textwidth}
-    \begin{block}{Playwright}
-      \tiny
-      cd tests/playwright \&\& npm install\\
-      npx playwright install chromium --with-deps\\
-      npx playwright test
-    \end{block}
-  \end{columns}
-  \vspace{4pt}
-  \begin{exampleblock}{执行结果}
-    \tiny
-    \$ npx playwright test\\
-    5 passed (9.8s)\\
-    \relax\ \checkmark\ redirects to /login (45ms)\\
-    \relax\ \checkmark\ renders title (44ms)\\
-    \relax\ \checkmark\ Full pipeline (9.2s)
-  \end{exampleblock}
 \end{frame}
 
 % ============================================
