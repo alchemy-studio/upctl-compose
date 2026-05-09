@@ -1,0 +1,25 @@
+name: Compile Userguide PDF
+
+# 只在定时触发时运行，不随 PR/push 触发
+on:
+  schedule:
+    - cron: '0 10 * * 1'  # 每周一 10:00 UTC
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    container:
+      image: texlive/texlive:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile userguide PDF
+        working-directory: userguide
+        run: xelatex -interaction=nonstopmode userguide.tex
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: userguide
+          path: userguide/userguide.pdf
+          retention-days: 30
