@@ -1,0 +1,24 @@
+{
+  "name": "authcoreadmin",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host",
+    "dev:moicen": "mode=moicen vite --host",
+    "build:moicen": "mode=moicen vite build",
+    "deploy:moicen": "mode=moicen vite build && tar czf dist.tar.gz dist && scp dist.tar.gz moicen:/tmp/ && ssh moicen 'sudo tar xzf /tmp/dist.tar.gz -C /usr/local/openresty/nginx/html/authcoreadmin/ && sudo chmod -R o+rx /usr/local/openresty/nginx/html/authcoreadmin/ && rm /tmp/dist.tar.gz' && rm dist.tar.gz",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "dayjs": "^1.11.8",
+    "vue": "^3.3.2",
+    "vue-router": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "typescript": "~5.3.3",
+    "vite": "^5.4.0"
+  }
+}

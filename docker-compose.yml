@@ -74,6 +74,14 @@ services:
     ports:
       - "8088:80"
 
+  authcoreadmin:
+    build:
+      context: ./authcoreadmin
+    depends_on:
+      - authcore
+    ports:
+      - "8089:80"
+
   ai-agent:
     build:
       context: ./ai-agent

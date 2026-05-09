@@ -302,6 +302,31 @@ curl -sf localhost:3000/   # AuthCore
   \end{columns}
 \end{frame}
 
+\begin{frame}[fragile]{AI Agent 自动处理}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    系统部署完成后，AI Agent 自动开始轮询：\\[4pt]
+    \begin{enumerate}
+      \item 在 Gitea 创建工单并打 \texttt{approved} 标签
+      \item ai-agent 每 5 分钟轮询发现新工单
+      \item 自动调用 DeepSeek API 处理
+      \item 评论结果并关闭工单
+    \end{enumerate}
+    \vspace{4pt}
+    也可手动启动即时处理：\\[4pt]
+    \texttt{\$\ docker\ compose\ exec\ ai-agent\ \textbackslash}\\
+    \texttt{\qquad python3\ /app/poll\_worker.py\ --once}
+
+    \column{0.43\textwidth}
+    \includegraphics[width=\textwidth]{screenshots/05-ticket-list-with-data.png}
+    \vspace{4pt}
+    \tiny ai-agent 自动轮询日志：\\
+    \texttt{Processing issue \#185}\\
+    \texttt{DeepSeek response received}\\
+    \texttt{close \#185: 200 -- completed}
+  \end{columns}
+\end{frame}
+
 % ============================================
 \section{组件日志}
 % ============================================

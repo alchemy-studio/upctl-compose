@@ -10,6 +10,7 @@ Docker Compose project for `upctl` — ticket management system.
 | **authcore** | AuthCore identity & auth service | 3000 |
 | **upctl-svc** | Ticket management API (Gitea proxy + attachments) | 3005 |
 | **upctl-web** | Vue 3 ticket management frontend (served by nginx) | — |
+| **authcoreadmin** | Vue 3 AuthCore admin frontend (teacher management) | 80 → :8089 |
 | **ai-agent** | AI agent: polls Gitea, processes tickets via DeepSeek API | — |
 | **gitea** | Code hosting, CI/CD runner, and issue tracker | 3000/3001 |
 | **postgres** | Database for all services | 5432 |
@@ -228,6 +229,7 @@ sequenceDiagram
 | Location | Upstream |
 |----------|----------|
 | `/` | Static files (upctl-web dist) |
+| `/admin/` | `authcoreadmin:80` (proxied) |
 | `/api/v1/uc/` | `authcore:3000` |
 | `/api/v2/upctl/api/` | `upctl-svc:3005` |
 | `/gitea/` | `gitea:3000` |
