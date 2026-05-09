@@ -227,12 +227,12 @@ def ensure_tmux_session():
             ["tmux", "new-session", "-d", "-s", SESSION_NAME, "-c", WORK_DIR],
             check=True,
         )
-        # Display a helpful message in the tmux status
+        # Start deepseek-tui in the tmux session (shell_tool YOLO mode enabled by default)
         subprocess.run(
             ["tmux", "send-keys", "-t", SESSION_NAME,
-             "echo 'DeepSeek Agent ready. Waiting for tickets...'", "Enter"],
+             "deepseek-tui", "Enter"],
         )
-        log(f"Created tmux session '{SESSION_NAME}'")
+        log(f"Created tmux session '{SESSION_NAME}' with deepseek-tui (YOLO mode)")
 
 
 def main():
