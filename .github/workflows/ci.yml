@@ -17,17 +17,8 @@ jobs:
       - name: Validate docker-compose.yml
         run: docker compose config
 
-  build:
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build images
-        run: docker compose build --no-cache authcore authcoreadmin upctl-svc upctl-web ai-agent
-
   integration:
-    needs: build
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +27,9 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: echo "::add-mask::$DEEPSEEK_API_KEY"
+
+      - name: Build images
+        run: docker compose build authcore authcoreadmin upctl-svc upctl-web ai-agent
 
       - name: Start dependencies (postgres + redis + gitea)
         run: |
