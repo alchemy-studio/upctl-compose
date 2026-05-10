@@ -35,8 +35,8 @@ jobs:
         run: test -f userguide/userguide.pdf
 
       - name: Commit updated PDF
-        working-directory: ${{ github.workspace }}
         run: |
+          cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add userguide/userguide.pdf
