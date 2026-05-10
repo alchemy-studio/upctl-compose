@@ -32,6 +32,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       UC_PORT: "3000"
       UC_DB_URL: postgres://upctl:upctl_dev@postgres:5432/upctl

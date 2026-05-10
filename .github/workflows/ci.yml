@@ -37,9 +37,9 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: echo "::add-mask::$DEEPSEEK_API_KEY"
 
-      - name: Start dependencies (postgres + gitea)
+      - name: Start dependencies (postgres + redis + gitea)
         run: |
-          docker compose up -d postgres gitea
+          docker compose up -d postgres redis gitea
 
       - name: Wait for postgres health
         run: |
