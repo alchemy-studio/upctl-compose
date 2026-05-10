@@ -28,16 +28,9 @@ async function loginViaForm(page: Page, username = "demo", password = "demo123")
   }
 }
 
-/** Navigate using Vue Router (SPA) to preserve user roles in the store. */
-async function spaNavigate(page: Page, path: string) {
-  await page.evaluate((p) => {
-    const app = (document.querySelector("#app") as any)?.__vue_app__;
-    if (app?.config?.globalProperties?.$router) {
-      app.config.globalProperties.$router.push(p);
-    } else {
-      window.location.href = p;
-    }
-  }, path);
+/** Navigate to a path on the app. JWT is in localStorage so auth state is preserved. */
+async function navigateTo(page: Page, path: string) {
+  await page.goto(`${BASE_URL}${path}`, { waitUntil: "networkidle" });
 }
 
 test.describe("Image upload", () => {
@@ -56,7 +49,7 @@ test.describe("Image upload", () => {
     fs.writeFileSync(pngPath, MINI_PNG);
 
     await loginViaForm(page);
-    await spaNavigate(page, "/tickets/new");
+    await navigateTo(page, "/tickets/new");
     await expect(page.locator("h1")).toContainText("新建工单");
 
     // Fill title
@@ -112,8 +105,8 @@ test.describe("Image upload", () => {
     );
     expect(createResp).toBeGreaterThan(0);
 
-    // Navigate to ticket detail via SPA (preserves user roles)
-    await spaNavigate(page, `/tickets/${createResp}`);
+    // Navigate to ticket detail
+    await navigateTo(page, `/tickets/${createResp}`);
 
     // Upload image in comment section
     const fileInputs = page.locator(".reply-section input[type='file']");
@@ -137,23 +130,16 @@ test.describe("Image upload", () => {
     fs.writeFileSync(pngPath, MINI_PNG);
 
     await loginViaForm(page);
-    await spaNavigate(page, "/tickets/new");
+    await navigateTo(page, "/tickets/new");
 
-    // Override fetch to simulate failure
-    await page.evaluate(() => {
-      const orig = window.fetch;
-      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-        if (url.includes("upload_attachment")) {
-          return Promise.resolve(
-            new Response(JSON.stringify({ r: false, e: "Upload failed" }), {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            }),
-          );
-        }
-        return orig(input, init);
-      };
+    // Intercept upload_attachment API to simulate failure
+    // (upctl-web uses axios/XHR, so window.fetch override won't work)
+    await page.route('**/api/v2/upctl/api/upload_attachment**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ r: false, e: "Upload failed" }),
+      });
     });
 
     // Upload file

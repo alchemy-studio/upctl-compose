@@ -226,13 +226,7 @@ test.describe("Project management page — UI flow", () => {
 
   test("project selector visible on create ticket page", async ({ page }) => {
     await login(page);
-    // Use SPA navigation to preserve user roles in the store
-    await page.evaluate(() => {
-      const app = (document.querySelector("#app") as any)?.__vue_app__;
-      if (app?.config?.globalProperties?.$router) {
-        app.config.globalProperties.$router.push("/tickets/new");
-      }
-    });
+    await page.goto(`${BASE_URL}/tickets/new`, { waitUntil: "networkidle" });
     await expect(page.locator("h1")).toContainText("新建工单");
     await expect(page.locator("text=关联项目")).toBeVisible();
   });
