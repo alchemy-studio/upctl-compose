@@ -6,7 +6,6 @@
     "dev": "vite --host",
     "dev:moicen": "mode=moicen vite --host",
     "build:moicen": "mode=moicen vite build",
-    "deploy:moicen": "mode=moicen vite build && tar czf dist.tar.gz dist && scp dist.tar.gz moicen:/tmp/ && ssh moicen 'sudo tar xzf /tmp/dist.tar.gz -C /usr/local/openresty/nginx/html/authcoreadmin/ && sudo chmod -R o+rx /usr/local/openresty/nginx/html/authcoreadmin/ && rm /tmp/dist.tar.gz' && rm dist.tar.gz",
     "preview": "vite preview"
   },
   "dependencies": {

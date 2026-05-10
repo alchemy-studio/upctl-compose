@@ -16,10 +16,10 @@ const Environments: Record<string, any> = {
     base: '/admin/',
   },
   moicen: {
-    main: 'https://admin.moicen.com',
-    host: 'admin.moicen.com',
+    main: '',
+    host: '',
     wx_app: '',
-    base: '/authcoreadmin/',
+    base: '/',
   },
 }
 

@@ -1,36 +1,40 @@
 import { reactive } from 'vue'
 import request from '@/utils/request'
 import { saveToken, clearTokens, HtySudoToken } from '@/utils/index'
-import type { HtyUser, HtyRole, HtyApp } from '@/types'
+import type { HtyUser, HtyRole } from '@/types'
 
 interface UserState {
   currentUser: HtyUser | null
   currentRole?: string
   roles: HtyRole[]
   loading: boolean
-  teachers: HtyUser[]
 }
 
 const store = reactive<UserState>({
   currentUser: null,
   roles: [],
   loading: false,
-  teachers: [],
 })
 
 export default function useUser() {
   async function loginWithPassword(username: string, password: string) {
     store.loading = true
-    const { r, d, e } = await request({
+    console.log('[login] calling login_with_password...')
+    const res = await request({
       url: '/api/v1/uc/login_with_password',
       method: 'POST',
       data: { username, password },
     })
+    console.log('[login] login_with_password response:', JSON.stringify(res))
     store.loading = false
-    if (r && d) {
-      saveToken(d)
-      return await read()
+    if (res.r && res.d) {
+      console.log('[login] saving token, then calling read()...')
+      saveToken(res.d)
+      const readResult = await read()
+      console.log('[login] read() result:', readResult)
+      return readResult
     }
+    console.log('[login] login_with_password failed, r=', res.r, 'd=', res.d, 'e=', res.e)
     return false
   }
 
@@ -67,62 +71,23 @@ export default function useUser() {
 
   async function read() {
     store.loading = true
-    const { r, d, e } = await request({
+    console.log('[login] calling find_user_with_info_by_token...')
+    console.log('[login] Authorization token in localStorage:', window.localStorage.getItem('Authorization')?.substring(0, 30) + '...')
+    const res = await request({
       url: '/api/v1/uc/find_user_with_info_by_token',
     })
+    console.log('[login] find_user_with_info_by_token response:', JSON.stringify(res))
     store.loading = false
-    if (r && d) {
-      store.currentUser = d as HtyUser
-      const userApp = d.infos?.[0]
+    if (res.r && res.d) {
+      store.currentUser = res.d as HtyUser
+      const userApp = res.d.infos?.[0]
       if (userApp?.roles) {
         store.roles = userApp.roles
       }
       return true
     }
+    console.log('[login] read() failed, r=', res.r, 'd=', res.d, 'e=', res.e)
     return false
-  }
-
-  async function getAllTeachers() {
-    const { r, d, e } = await request({
-      url: '/api/v1/uc/find_users_with_info_by_role/TEACHER',
-    })
-    if (r && Array.isArray(d)) {
-      store.teachers = d.map((u: HtyUser) => ({
-        ...u,
-        ...(u.infos?.[0] || {}),
-      }))
-    } else {
-      store.teachers = []
-    }
-  }
-
-  async function getAppByDomain(): Promise<HtyApp | undefined> {
-    const { r, d, e } = await request({ url: '/api/v1/uc/find_app_by_domain' })
-    if (r && d) return d as HtyApp
-    return undefined
-  }
-
-  async function verify(teacherId: string, validate: boolean, rejectReason?: string) {
-    const app = await getAppByDomain()
-    if (!app) return false
-    const { r, d, e } = await request({
-      url: '/api/v1/uc/register/verify',
-      method: 'POST',
-      data: { hty_id: teacherId, app_id: app.app_id, validate, reject_reason: rejectReason },
-    })
-    return r
-  }
-
-  async function approveTeacher(teacherId: string) {
-    const ok = await verify(teacherId, true)
-    if (ok) await getAllTeachers()
-    return ok
-  }
-
-  async function rejectTeacher(teacherId: string, reason: string) {
-    const ok = await verify(teacherId, false, reason)
-    if (ok) await getAllTeachers()
-    return ok
   }
 
   function checkRole(roleKey: string): boolean {
@@ -132,7 +97,6 @@ export default function useUser() {
   function logout() {
     store.currentUser = null
     store.roles = []
-    store.teachers = []
     clearTokens()
     window.location.href = '/login'
   }
@@ -143,9 +107,6 @@ export default function useUser() {
     login,
     sudo,
     read,
-    getAllTeachers,
-    approveTeacher,
-    rejectTeacher,
     checkRole,
     logout,
   }

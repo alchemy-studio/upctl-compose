@@ -21,3 +21,10 @@ test_*.tex
 # Playwright
 tests/playwright/package-lock.json
 tests/playwright/test-results/
+tests/playwright/screenshots/
+
+# Build output
+dist/
+
+# authcoreadmin
+authcoreadmin/dist/
