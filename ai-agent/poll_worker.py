@@ -101,6 +101,7 @@ def list_approved_issues() -> list[dict]:
             if isinstance(i, dict)
             and i.get("state") == "open"
             and any(l.get("name") == "approved" for l in i.get("labels", []))
+            and not any(l.get("name") == "in_progress" for l in i.get("labels", []))
         ]
     except Exception as e:
         log(f"Error fetching issues: {e}")

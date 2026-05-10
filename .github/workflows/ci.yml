@@ -84,6 +84,14 @@ jobs:
             sleep 2
           done
 
+      - name: Configure upctl-svc (memory_dir + prompt_prefix) for agent tests
+        run: |
+          # Configure memory_dir so agent-prompt tests include "Memory 上下文" section
+          docker compose exec -T upctl-svc sh -c 'mkdir -p /app/data && echo "/app/data" > /app/data/memory_dir.txt'
+          docker compose exec -T upctl-svc sh -c 'echo "不要进入plan mode，直接干活" > /app/data/prompt_prefix.txt'
+          # Create MEMORY.md so the assembled prompt references it
+          printf "upctl-compose dev compose stack\n" | docker compose exec -T upctl-svc sh -c 'cat > /app/data/MEMORY.md'
+
       - name: Smoke test — nginx serves frontend
         run: |
           http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8088/)
