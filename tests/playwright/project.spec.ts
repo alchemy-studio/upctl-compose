@@ -227,7 +227,17 @@ test.describe("Project management page — UI flow", () => {
   test("project selector visible on create ticket page", async ({ page }) => {
     await login(page);
     await page.goto(`${BASE_URL}/tickets/new`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
-    await page.waitForSelector('h1', { timeout: 10_000 });
+    await page.waitForTimeout(3000);
+    // Page may redirect to ticket list if user lacks create permission;
+    // in that case, try clicking create button
+    const h1Text = await page.locator('h1').textContent().catch(() => '');
+    if (h1Text?.includes('工单列表')) {
+      const createLink = page.locator('a:has-text("新建工单"), button:has-text("新建工单")');
+      if (await createLink.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await createLink.click();
+        await page.waitForTimeout(2000);
+      }
+    }
     await expect(page.locator("h1")).toContainText("新建工单");
     await expect(page.locator("text=关联项目")).toBeVisible();
   });

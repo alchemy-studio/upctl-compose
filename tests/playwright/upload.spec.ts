@@ -28,10 +28,23 @@ async function loginViaForm(page: Page, username = "demo", password = "demo123")
   }
 }
 
-/** Navigate to a path on the app. JWT is in localStorage so auth state is preserved. */
+/** Navigate to a path on the app preserving SPA state. */
 async function navigateTo(page: Page, path: string) {
-  await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
-  await page.waitForSelector('h1', { timeout: 10_000 });
+  await page.evaluate((p) => {
+    const app = (document.querySelector("#app") as any)?.__vue_app__;
+    if (app?.config?.globalProperties?.$router) {
+      app.config.globalProperties.$router.push(p);
+    } else {
+      window.location.href = p;
+    }
+  }, path);
+  // Wait for SPA to render after navigation
+  await page.waitForTimeout(2000);
+  // Fallback: if SPA nav didn't work, try direct goto
+  if (!page.url().includes(path.replace(/^\//, ''))) {
+    await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+    await page.waitForTimeout(2000);
+  }
 }
 
 test.describe("Image upload", () => {

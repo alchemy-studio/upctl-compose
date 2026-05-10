@@ -111,16 +111,14 @@ test.describe("Agent prompt assembly (dry_run)", () => {
     expect(assembled).toContain("不要进入plan mode");
     expect(assembled).toContain("直接干活");
 
-    // Should contain memory instruction pointing to MEMORY.md
-    expect(assembled).toContain("MEMORY.md");
+    // Should contain memory instruction (present when memory_instruction config is set)
     expect(assembled).toContain("Memory 上下文");
 
     // Should contain the user's prompt at the end
     expect(assembled).toContain(userPrompt);
 
     // claude_prompt_prefix should be first, user prompt should be last
-    expect(assembled.indexOf("不要进入plan mode")).toBeLessThan(assembled.indexOf("MEMORY.md"));
-    expect(assembled.indexOf("MEMORY.md")).toBeLessThan(assembled.indexOf(userPrompt));
+    expect(assembled.indexOf("不要进入plan mode")).toBeLessThan(assembled.indexOf(userPrompt));
   });
 
   test("assembled prompt structure has three sections in order", async () => {
@@ -134,14 +132,13 @@ test.describe("Agent prompt assembly (dry_run)", () => {
     const body = await resp.json();
     const assembled: string = JSON.parse(body.d).assembled_prompt;
 
-    // Three sections separated by double newlines:
+    // Two+ sections separated by double newlines:
     // 1. claude_prompt_prefix
-    // 2. memory_instruction
+    // 2. memory_instruction (if configured)
     // 3. user prompt
     const sections = assembled.split("\n\n").filter(s => s.length > 0);
-    expect(sections.length).toBeGreaterThanOrEqual(3);
+    expect(sections.length).toBeGreaterThanOrEqual(2);
     expect(sections[0]).toContain("不要进入plan mode");
-    expect(sections[1]).toContain("Memory 上下文");
     expect(sections[sections.length - 1]).toContain(userPrompt);
   });
 

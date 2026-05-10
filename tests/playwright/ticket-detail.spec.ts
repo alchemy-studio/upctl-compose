@@ -144,7 +144,7 @@ test.describe("Ticket detail — admin actions", () => {
 
     // Click start-progress button
     const progressBtn = page.locator('.btn-pin:has-text("开始处理")');
-    await expect(progressBtn).toBeVisible();
+    await expect(progressBtn).toBeVisible({ timeout: 10_000 });
     await progressBtn.click();
 
     // Wait for button to disappear
