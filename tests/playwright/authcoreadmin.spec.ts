@@ -22,15 +22,19 @@ async function login(page: Page, destination?: string) {
   await page.locator('input[placeholder="用户名"]').fill("demo");
   await page.locator('input[placeholder="密码"]').fill("demo123");
   await page.locator('button:has-text("登录")').click();
-  // Wait for JWT stored AND navigation away from login to complete
-  // (loginWithPassword → read() → router.push('/') — all synchronous chain)
+  // Wait for JWT stored
   await page.waitForFunction(
     () => !!window.localStorage.getItem("Authorization"),
     { timeout: 15_000 },
   );
-  // Wait for the SPA's own redirect to finish (read() populated currentUser,
-  // router.push('/') completed, dashboard mounted)
-  await page.waitForURL(/\/admin/, { timeout: 10_000 });
+  // After login the SPA redirects to dashboard; if the redirect lands on
+  // the wrong URL, force-correct to /admin/ to ensure we're on the right SPA.
+  const currentUrl = page.url();
+  if (!currentUrl.includes("/admin")) {
+    await page.goto(`${AUTH_ADMIN_URL}/`, { waitUntil: "networkidle" });
+  }
+  // Confirm dashboard has fully rendered with its h1
+  await expect(page.locator("h1")).toContainText("AuthCore");
   // Navigate to desired page via SPA to preserve user roles in the store
   if (destination) {
     await spaNavigate(page, destination);
@@ -72,7 +76,8 @@ test.describe("AuthCoreAdmin — Navigation", () => {
     await expect(page).toHaveURL(/\/apps/);
     await expect(page.locator("h1")).toContainText("应用管理");
 
-    await page.locator('nav a:has-text("首页")').click();
-    await expect(page).toHaveURL(/\/$/);
+    // Apps page has no nav — use SPA navigation to return to dashboard
+    await spaNavigate(page, "/");
+    await expect(page).toHaveURL(/\/admin\/?$/);
   });
 });

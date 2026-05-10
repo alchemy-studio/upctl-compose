@@ -151,9 +151,8 @@ test.describe("Ticket detail — admin actions", () => {
     await expect(progressBtn).not.toBeVisible({ timeout: 10_000 });
 
     // Both approved and in_progress labels should be visible
-    const labels = page.locator(".label");
-    await expect(labels).toContainText("approved");
-    await expect(labels).toContainText("in_progress");
+    await expect(page.locator(".label").filter({ hasText: "approved" })).toBeVisible();
+    await expect(page.locator(".label").filter({ hasText: "in_progress" })).toBeVisible();
   });
 
   test("non-admin user cannot see manage buttons", async ({ page }) => {

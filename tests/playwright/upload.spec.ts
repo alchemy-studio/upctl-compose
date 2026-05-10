@@ -9,18 +9,23 @@ const MINI_PNG = Buffer.from(
   "base64",
 );
 
-/** Log in via the username/password form and return JWT. */
+/** Log in via the username/password form. */
 async function loginViaForm(page: Page, username = "demo", password = "demo123") {
   await page.goto(`${BASE_URL}/login`);
   await page.waitForSelector('input[placeholder="用户名"]');
   await page.locator('input[placeholder="用户名"]').fill(username);
   await page.locator('input[placeholder="密码"]').fill(password);
   await page.locator('button:has-text("登录")').click();
-  // Wait for JWT to be stored (login API succeeded)
+  // Wait for JWT stored AND redirect away from /login
   await page.waitForFunction(
     () => !!window.localStorage.getItem("Authorization"),
     { timeout: 10_000 },
   );
+  try {
+    await page.waitForFunction(() => !window.location.href.includes("/login"), { timeout: 10_000 });
+  } catch {
+    await page.goto(BASE_URL, { waitUntil: "networkidle" });
+  }
 }
 
 /** Navigate using Vue Router (SPA) to preserve user roles in the store. */

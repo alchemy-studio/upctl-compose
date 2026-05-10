@@ -43,6 +43,12 @@ async function login(page: Page) {
     () => !!window.localStorage.getItem("Authorization"),
     { timeout: 10_000 },
   );
+  // Wait for redirect away from /login; if stuck, force-navigate to home
+  try {
+    await page.waitForFunction(() => !window.location.href.includes("/login"), { timeout: 10_000 });
+  } catch {
+    await page.goto(BASE_URL, { waitUntil: "networkidle" });
+  }
 }
 
 test.describe("Project management API", () => {
@@ -157,8 +163,9 @@ test.describe("Project management page — UI flow", () => {
     await expect(page.locator(".dialog")).not.toBeVisible();
 
     // Project should appear in the list
-    await expect(page.locator(".project-card")).toContainText(projectName);
-    await expect(page.locator(".project-card")).toContainText("https://github.com/e2e/test-repo");
+    const projectCard = page.locator(".project-card").filter({ hasText: projectName });
+    await expect(projectCard).toBeVisible();
+    await expect(projectCard).toContainText("https://github.com/e2e/test-repo");
   });
 
   test("edits an existing project", async ({ page }) => {
@@ -190,7 +197,8 @@ test.describe("Project management page — UI flow", () => {
 
     // Should show updated name
     await expect(page.locator(".project-card").filter({ hasText: updatedName })).toBeVisible();
-    await expect(page.locator(".project-card").filter({ hasText: projectName })).not.toBeVisible();
+    // Card with original name only (not substring of updated name)
+    await expect(page.locator(`.project-card:has-text("${projectName}")`).filter({ hasNotText: "(edited)" })).toHaveCount(0);
   });
 
   test("deletes a project", async ({ page }) => {

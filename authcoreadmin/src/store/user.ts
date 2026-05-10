@@ -29,6 +29,7 @@ export default function useUser() {
     store.loading = false
     if (r && d) {
       saveToken(d)
+      await sudo()
       return await read()
     }
     return false

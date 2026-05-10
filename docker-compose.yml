@@ -46,6 +46,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       ROCKET_ADDRESS: "0.0.0.0"
+      SKIP_POST_LOGIN: "true"
     ports:
       - "3000:3000"
 

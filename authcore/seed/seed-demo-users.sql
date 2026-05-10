@@ -60,3 +60,20 @@ WHERE NOT EXISTS (
   WHERE user_info_id = (SELECT id FROM user_app_info WHERE username = 'admin' AND app_id = 'demo-app' LIMIT 1)
   AND role_id = 'demo-admin-role'
 );
+
+-- 8. Create root app (required by /api/v1/uc/sudo endpoint)
+INSERT INTO hty_apps (app_id, domain, app_status, app_desc)
+SELECT 'root-app', 'root', 'ACTIVE', 'Root app for sudo operations'
+WHERE NOT EXISTS (SELECT 1 FROM hty_apps WHERE domain = 'root');
+
+-- 9. Create root user (required by /api/v1/uc/sudo endpoint)
+INSERT INTO hty_users (hty_id, union_id, enabled, created_at, real_name)
+SELECT 'root-user', 'root', true, now(), 'Root User'
+WHERE NOT EXISTS (SELECT 1 FROM hty_users WHERE hty_id = 'root-user');
+
+-- 10. Link root user to root app with username 'root'
+INSERT INTO user_app_info (id, hty_id, app_id, username, password, is_registered, created_at)
+SELECT gen_random_uuid()::text, 'root-user', 'root-app', 'root', null, true, now()
+WHERE NOT EXISTS (
+  SELECT 1 FROM user_app_info WHERE username = 'root' AND app_id = 'root-app'
+);
