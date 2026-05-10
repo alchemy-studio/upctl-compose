@@ -1,40 +1,36 @@
 import { reactive } from 'vue'
 import request from '@/utils/request'
 import { saveToken, clearTokens, HtySudoToken } from '@/utils/index'
-import type { HtyUser, HtyRole } from '@/types'
+import type { HtyUser, HtyRole, HtyApp } from '@/types'
 
 interface UserState {
   currentUser: HtyUser | null
   currentRole?: string
   roles: HtyRole[]
   loading: boolean
+  users: HtyUser[]
 }
 
 const store = reactive<UserState>({
   currentUser: null,
   roles: [],
   loading: false,
+  users: [],
 })
 
 export default function useUser() {
   async function loginWithPassword(username: string, password: string) {
     store.loading = true
-    console.log('[login] calling login_with_password...')
-    const res = await request({
+    const { r, d, e } = await request({
       url: '/api/v1/uc/login_with_password',
       method: 'POST',
       data: { username, password },
     })
-    console.log('[login] login_with_password response:', JSON.stringify(res))
     store.loading = false
-    if (res.r && res.d) {
-      console.log('[login] saving token, then calling read()...')
-      saveToken(res.d)
-      const readResult = await read()
-      console.log('[login] read() result:', readResult)
-      return readResult
+    if (r && d) {
+      saveToken(d)
+      return await read()
     }
-    console.log('[login] login_with_password failed, r=', res.r, 'd=', res.d, 'e=', res.e)
     return false
   }
 
@@ -71,23 +67,62 @@ export default function useUser() {
 
   async function read() {
     store.loading = true
-    console.log('[login] calling find_user_with_info_by_token...')
-    console.log('[login] Authorization token in localStorage:', window.localStorage.getItem('Authorization')?.substring(0, 30) + '...')
-    const res = await request({
+    const { r, d, e } = await request({
       url: '/api/v1/uc/find_user_with_info_by_token',
     })
-    console.log('[login] find_user_with_info_by_token response:', JSON.stringify(res))
     store.loading = false
-    if (res.r && res.d) {
-      store.currentUser = res.d as HtyUser
-      const userApp = res.d.infos?.[0]
+    if (r && d) {
+      store.currentUser = d as HtyUser
+      const userApp = d.infos?.[0]
       if (userApp?.roles) {
         store.roles = userApp.roles
       }
       return true
     }
-    console.log('[login] read() failed, r=', res.r, 'd=', res.d, 'e=', res.e)
     return false
+  }
+
+  async function getAllUsers() {
+    const { r, d, e } = await request({
+      url: '/api/v1/uc/find_users_with_info_by_role/TEACHER',
+    })
+    if (r && Array.isArray(d)) {
+      store.users = d.map((u: HtyUser) => ({
+        ...u,
+        ...(u.infos?.[0] || {}),
+      }))
+    } else {
+      store.users = []
+    }
+  }
+
+  async function getAppByDomain(): Promise<HtyApp | undefined> {
+    const { r, d, e } = await request({ url: '/api/v1/uc/find_app_by_domain' })
+    if (r && d) return d as HtyApp
+    return undefined
+  }
+
+  async function verify(userId: string, validate: boolean, rejectReason?: string) {
+    const app = await getAppByDomain()
+    if (!app) return false
+    const { r, d, e } = await request({
+      url: '/api/v1/uc/register/verify',
+      method: 'POST',
+      data: { hty_id: userId, app_id: app.app_id, validate, reject_reason: rejectReason },
+    })
+    return r
+  }
+
+  async function approveUser(userId: string) {
+    const ok = await verify(userId, true)
+    if (ok) await getAllUsers()
+    return ok
+  }
+
+  async function rejectUser(userId: string, reason: string) {
+    const ok = await verify(userId, false, reason)
+    if (ok) await getAllUsers()
+    return ok
   }
 
   function checkRole(roleKey: string): boolean {
@@ -97,6 +132,7 @@ export default function useUser() {
   function logout() {
     store.currentUser = null
     store.roles = []
+    store.users = []
     clearTokens()
     window.location.href = '/login'
   }
@@ -107,6 +143,9 @@ export default function useUser() {
     login,
     sudo,
     read,
+    getAllUsers,
+    approveUser,
+    rejectUser,
     checkRole,
     logout,
   }

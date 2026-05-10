@@ -11,6 +11,8 @@ export interface HtyUser {
   is_registered?: boolean
   reject_reason?: string
   login?: string
+  mobile?: string
+  sex?: string
 }
 
 export interface HtyUserApp {
@@ -37,6 +39,30 @@ export interface HtyTag {
 
 export interface HtyApp {
   app_id: string
-  app_key: string
-  app_name: string
+  app_key?: string
+  app_name?: string
+  wx_id?: string
+  wx_secret?: string
+  app_desc?: string
+  app_status?: string
+  domain?: string
+  pubkey?: string
+  privkey?: string
+  is_wx_app?: boolean
+  roles?: HtyRole[]
+  gonggaos?: HtyGonggao[]
+}
+
+export interface HtyGonggao {
+  id?: number
+  app_id: string
+  app_desc?: string
+  content?: string
+  gonggao_status?: string
+  created_at?: string
+}
+
+export const HtyStates = {
+  ACTIVE: 'ACTIVE',
+  DELETED: 'DELETED',
 }
