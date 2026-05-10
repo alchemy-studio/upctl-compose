@@ -53,7 +53,7 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           DEFAULT_MODEL: ${{ secrets.DEFAULT_MODEL }}
         run: |
-          docker compose up -d authcore upctl-svc upctl-web ai-agent
+          docker compose up -d authcore authcoreadmin upctl-svc upctl-web ai-agent
           docker compose logs --tail=20 authcore upctl-svc upctl-web ai-agent
 
       - name: Wait for authcore (30s timeout)
