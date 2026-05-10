@@ -18,10 +18,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install CJK fonts
+      - name: Install CJK fonts & git
         run: |
           apt-get update -qq
-          apt-get install -y -qq fonts-noto-cjk
+          apt-get install -y -qq fonts-noto-cjk git
 
       - name: Compile userguide PDF (pass 1)
         working-directory: userguide
@@ -36,13 +36,7 @@ jobs:
 
       - name: Commit updated PDF
         run: |
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-          echo "PWD=$(pwd)"
-          ls -la "$GITHUB_WORKSPACE" | head -5
-          ls -la "$GITHUB_WORKSPACE/.git" 2>/dev/null || echo "No .git at workspace"
-          ls -la .git 2>/dev/null || echo "No .git at pwd"
-          # Try the workspace path directly
-          cd "$GITHUB_WORKSPACE" && test -d .git || { echo "Not a git repo at GITHUB_WORKSPACE"; exit 1; }
+          cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add userguide/userguide.pdf
