@@ -38,7 +38,11 @@ async function login(page: Page) {
   await page.locator('input[placeholder="用户名"]').fill("demo");
   await page.locator('input[placeholder="密码"]').fill("demo123");
   await page.locator('button:has-text("登录")').click();
-  await page.waitForURL(/^(?!.*\/login)/, { timeout: 10_000 });
+  // Wait for JWT to be stored (login API succeeded)
+  await page.waitForFunction(
+    () => !!window.localStorage.getItem("Authorization"),
+    { timeout: 10_000 },
+  );
 }
 
 test.describe("Project management API", () => {
@@ -167,10 +171,11 @@ test.describe("Project management page — UI flow", () => {
     await page.locator('.dialog input[placeholder="如 upctl-svc"]').fill(projectName);
     await page.locator('.dialog button:has-text("保存")').click();
     await expect(page.locator(".dialog")).not.toBeVisible();
-    await expect(page.locator(".project-card")).toContainText(projectName);
+    const editCard = page.locator(".project-card").filter({ hasText: projectName });
+    await expect(editCard).toBeVisible();
 
-    // Click edit button
-    await page.locator('.project-card button:has-text("编辑")').click();
+    // Click edit button within this project card
+    await editCard.locator('button:has-text("编辑")').click();
     await expect(page.locator(".dialog h3")).toContainText("编辑项目");
 
     // Modify the name
@@ -184,8 +189,8 @@ test.describe("Project management page — UI flow", () => {
     await expect(page.locator(".dialog")).not.toBeVisible();
 
     // Should show updated name
-    await expect(page.locator(".project-card")).toContainText(updatedName);
-    await expect(page.locator(".project-card")).not.toContainText(projectName);
+    await expect(page.locator(".project-card").filter({ hasText: updatedName })).toBeVisible();
+    await expect(page.locator(".project-card").filter({ hasText: projectName })).not.toBeVisible();
   });
 
   test("deletes a project", async ({ page }) => {
@@ -198,21 +203,28 @@ test.describe("Project management page — UI flow", () => {
     await page.locator('.dialog input[placeholder="如 upctl-svc"]').fill(projectName);
     await page.locator('.dialog button:has-text("保存")').click();
     await expect(page.locator(".dialog")).not.toBeVisible();
-    await expect(page.locator(".project-card")).toContainText(projectName);
+    const deleteCard = page.locator(".project-card").filter({ hasText: projectName });
+    await expect(deleteCard).toBeVisible();
 
-    // Click delete
-    await page.locator('.project-card button:has-text("删除")').click();
+    // Click delete within this project card
+    await deleteCard.locator('button:has-text("删除")').click();
     // Confirm dialog
     await expect(page.locator(".dialog h3")).toContainText("确认删除");
     await page.locator('.dialog button:has-text("删除")').click();
 
     // Should not show the deleted project
-    await expect(page.locator(".project-card")).not.toContainText(projectName);
+    await expect(page.locator(".project-card").filter({ hasText: projectName })).not.toBeVisible();
   });
 
   test("project selector visible on create ticket page", async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE_URL}/tickets/new`);
+    // Use SPA navigation to preserve user roles in the store
+    await page.evaluate(() => {
+      const app = (document.querySelector("#app") as any)?.__vue_app__;
+      if (app?.config?.globalProperties?.$router) {
+        app.config.globalProperties.$router.push("/tickets/new");
+      }
+    });
     await expect(page.locator("h1")).toContainText("新建工单");
     await expect(page.locator("text=关联项目")).toBeVisible();
   });

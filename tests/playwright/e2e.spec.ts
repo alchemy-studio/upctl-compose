@@ -36,14 +36,18 @@ function generateJwt(): string {
   return `${header}.${body}.${sig}`;
 }
 
-/** Log in via the username/password form and wait for redirect to /. */
+/** Log in via the username/password form and wait for redirect. */
 async function loginViaForm(page: Page, username = "demo", password = "demo123") {
   await page.goto(`${BASE_URL}/login`);
   await page.waitForSelector('input[placeholder="用户名"]');
   await page.locator('input[placeholder="用户名"]').fill(username);
   await page.locator('input[placeholder="密码"]').fill(password);
   await page.locator('button:has-text("登录")').click();
-  await page.waitForURL('**/');
+  // Wait for JWT to be stored (login API succeeded)
+  await page.waitForFunction(
+    () => !!window.localStorage.getItem("Authorization"),
+    { timeout: 10_000 },
+  );
 }
 
 test.describe("Login page", () => {

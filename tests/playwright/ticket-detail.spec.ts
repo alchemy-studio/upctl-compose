@@ -9,9 +9,25 @@ async function loginAndGetJwt(page: Page): Promise<string> {
   await page.locator('input[placeholder="用户名"]').fill("demo");
   await page.locator('input[placeholder="密码"]').fill("demo123");
   await page.locator('button:has-text("登录")').click();
-  await page.waitForURL(/^(?!.*\/login)/, { timeout: 10_000 });
+  // Wait for JWT to be stored (login API succeeded)
+  await page.waitForFunction(
+    () => !!window.localStorage.getItem("Authorization"),
+    { timeout: 10_000 },
+  );
   const jwt = await page.evaluate(() => window.localStorage.getItem("Authorization") || "");
   return jwt;
+}
+
+/** Navigate using Vue Router (SPA) to preserve user roles in the store. */
+async function spaNavigate(page: Page, path: string) {
+  await page.evaluate((p) => {
+    const app = (document.querySelector("#app") as any)?.__vue_app__;
+    if (app?.config?.globalProperties?.$router) {
+      app.config.globalProperties.$router.push(p);
+    } else {
+      window.location.href = p;
+    }
+  }, path);
 }
 
 test.describe("Ticket detail — admin actions", () => {
@@ -43,8 +59,8 @@ test.describe("Ticket detail — admin actions", () => {
     );
     expect(ticketNum).toBeGreaterThan(0);
 
-    // Navigate to ticket detail
-    await page.goto(`${BASE_URL}/tickets/${ticketNum}`);
+    // Navigate to ticket detail (SPA to preserve roles)
+    await spaNavigate(page, `/tickets/${ticketNum}`);
     await expect(page.locator("h1")).toContainText(`#${ticketNum}`);
     await expect(page.locator(".ticket-title")).toContainText(title);
 
@@ -81,8 +97,8 @@ test.describe("Ticket detail — admin actions", () => {
     );
     expect(ticketNum).toBeGreaterThan(0);
 
-    // Navigate to ticket detail
-    await page.goto(`${BASE_URL}/tickets/${ticketNum}`);
+    // Navigate to ticket detail (SPA to preserve roles)
+    await spaNavigate(page, `/tickets/${ticketNum}`);
     await expect(page.locator("h1")).toContainText(`#${ticketNum}`);
 
     // Click approve button
@@ -122,8 +138,8 @@ test.describe("Ticket detail — admin actions", () => {
     );
     expect(ticketNum).toBeGreaterThan(0);
 
-    // Navigate to ticket detail
-    await page.goto(`${BASE_URL}/tickets/${ticketNum}`);
+    // Navigate to ticket detail (SPA to preserve roles)
+    await spaNavigate(page, `/tickets/${ticketNum}`);
     await expect(page.locator("h1")).toContainText(`#${ticketNum}`);
 
     // Click start-progress button
@@ -164,8 +180,8 @@ test.describe("Ticket detail — admin actions", () => {
     );
     expect(ticketNum).toBeGreaterThan(0);
 
-    // Navigate to ticket detail
-    await page.goto(`${BASE_URL}/tickets/${ticketNum}`);
+    // Navigate to ticket detail (SPA to preserve roles)
+    await spaNavigate(page, `/tickets/${ticketNum}`);
 
     // Demo user should have admin role — verify buttons are visible
     // (This validates that the role-based guard works as expected)

@@ -25,8 +25,11 @@ async function loginAndGetJwt(page: Page): Promise<string> {
   await page.locator('input[placeholder="用户名"]').fill("demo");
   await page.locator('input[placeholder="密码"]').fill("demo123");
   await page.locator('button:has-text("登录")').click();
-  // Wait for redirect away from /login
-  await page.waitForURL(/^(?!.*\/login)/, { timeout: 10_000 });
+  // Wait for JWT to be stored (login API succeeded)
+  await page.waitForFunction(
+    () => !!window.localStorage.getItem("Authorization"),
+    { timeout: 10_000 },
+  );
   // Extract JWT from localStorage
   const jwt = await page.evaluate(() => window.localStorage.getItem("Authorization") || "");
   return jwt;

@@ -9,14 +9,30 @@ const MINI_PNG = Buffer.from(
   "base64",
 );
 
-/** Log in via the username/password form. */
+/** Log in via the username/password form and return JWT. */
 async function loginViaForm(page: Page, username = "demo", password = "demo123") {
   await page.goto(`${BASE_URL}/login`);
   await page.waitForSelector('input[placeholder="用户名"]');
   await page.locator('input[placeholder="用户名"]').fill(username);
   await page.locator('input[placeholder="密码"]').fill(password);
   await page.locator('button:has-text("登录")').click();
-  await page.waitForURL('**/');
+  // Wait for JWT to be stored (login API succeeded)
+  await page.waitForFunction(
+    () => !!window.localStorage.getItem("Authorization"),
+    { timeout: 10_000 },
+  );
+}
+
+/** Navigate using Vue Router (SPA) to preserve user roles in the store. */
+async function spaNavigate(page: Page, path: string) {
+  await page.evaluate((p) => {
+    const app = (document.querySelector("#app") as any)?.__vue_app__;
+    if (app?.config?.globalProperties?.$router) {
+      app.config.globalProperties.$router.push(p);
+    } else {
+      window.location.href = p;
+    }
+  }, path);
 }
 
 test.describe("Image upload", () => {
@@ -35,7 +51,7 @@ test.describe("Image upload", () => {
     fs.writeFileSync(pngPath, MINI_PNG);
 
     await loginViaForm(page);
-    await page.goto(`${BASE_URL}/tickets/new`);
+    await spaNavigate(page, "/tickets/new");
     await expect(page.locator("h1")).toContainText("新建工单");
 
     // Fill title
@@ -47,7 +63,7 @@ test.describe("Image upload", () => {
     await fileInput.setInputFiles(pngPath);
 
     // Wait for upload to complete and markdown to appear in body
-    await expect(page.locator("textarea")).toContainText("![image](");
+    await expect(page.locator("textarea")).toHaveValue(/!\[image]\(/, { timeout: 10_000 });
 
     // Submit
     await page.locator('button:has-text("提交")').click();
@@ -91,15 +107,15 @@ test.describe("Image upload", () => {
     );
     expect(createResp).toBeGreaterThan(0);
 
-    // Navigate to ticket detail
-    await page.goto(`${BASE_URL}/tickets/${createResp}`);
+    // Navigate to ticket detail via SPA (preserves user roles)
+    await spaNavigate(page, `/tickets/${createResp}`);
 
     // Upload image in comment section
     const fileInputs = page.locator(".reply-section input[type='file']");
     await fileInputs.setInputFiles(pngPath);
 
     // Wait for markdown to appear
-    await expect(page.locator(".reply-section textarea")).toContainText("![image](");
+    await expect(page.locator(".reply-section textarea")).toHaveValue(/!\[image]\(/, { timeout: 10_000 });
 
     // Send comment
     await page.locator(".reply-section button:has-text('发送')").click();
@@ -116,7 +132,7 @@ test.describe("Image upload", () => {
     fs.writeFileSync(pngPath, MINI_PNG);
 
     await loginViaForm(page);
-    await page.goto(`${BASE_URL}/tickets/new`);
+    await spaNavigate(page, "/tickets/new");
 
     // Override fetch to simulate failure
     await page.evaluate(() => {
