@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build images
-        run: docker compose build --no-cache authcore upctl-svc upctl-web ai-agent
+        run: docker compose build --no-cache authcore authcoreadmin upctl-svc upctl-web ai-agent
 
   integration:
     needs: build
@@ -56,12 +56,25 @@ jobs:
           docker compose up -d authcore authcoreadmin upctl-svc upctl-web ai-agent
           docker compose logs --tail=20 authcore upctl-svc upctl-web ai-agent
 
-      - name: Wait for authcore (30s timeout)
+      - name: Wait for authcore (90s timeout)
         run: |
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:3000/ > /dev/null 2>&1 && echo "authcore ready" && break
+          for i in $(seq 1 45); do
+            result=$(curl -s http://localhost:3000/ 2>/dev/null || echo "")
+            if [ -n "$result" ]; then
+              echo "authcore ready (response: ${result:0:80})"
+              break
+            fi
             sleep 2
           done
+          # Verify login endpoint works
+          echo "Checking authcore login endpoint..."
+          login_resp=$(curl -s -X POST http://localhost:3000/api/v1/uc/login_with_password \
+            -H "Content-Type: application/json" \
+            -H "HtyHost: localhost" \
+            -d '{"username":"demo","password":"demo123"}' 2>/dev/null || echo "FAILED")
+          echo "Login response: ${login_resp:0:200}"
+          # Show authcore logs for debugging
+          docker compose logs --tail=30 authcore
 
       - name: Wait for upctl-svc (30s timeout)
         run: |
