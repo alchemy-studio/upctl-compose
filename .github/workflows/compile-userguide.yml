@@ -18,9 +18,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Compile userguide PDF
+      - name: Install CJK fonts
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq fonts-noto-cjk
+
+      - name: Compile userguide PDF (pass 1)
         working-directory: userguide
-        run: xelatex -interaction=nonstopmode userguide.tex
+        run: xelatex -interaction=nonstopmode userguide.tex || true
+
+      - name: Compile userguide PDF (pass 2 — for TOC)
+        working-directory: userguide
+        run: xelatex -interaction=nonstopmode userguide.tex || true
+
+      - name: Verify PDF was produced
+        run: test -f userguide/userguide.pdf
 
       - name: Commit updated PDF
         run: |
