@@ -27,9 +27,14 @@
 
 基于 Vue 3 的现代化 SPA，支持标签页切换、卡片视图、状态标记，通过 nginx 同源代理访问各后端服务。
 
-| 登录页 | 工单列表 | 工单详情 |
-|:---:|:---:|:---:|
-| ![登录页](userguide/screenshots/01-login-page.png) | ![工单列表](userguide/screenshots/02-ticket-list.png) | ![工单详情](userguide/screenshots/03-ticket-detail.png) |
+<img src="userguide/screenshots/01-login-page.png" width="680" alt="登录页"/>
+**登录页**
+
+<img src="userguide/screenshots/02-ticket-list.png" width="680" alt="工单列表"/>
+**工单列表**
+
+<img src="userguide/screenshots/03-ticket-detail.png" width="680" alt="工单详情"/>
+**工单详情**
 
 ### 🐙 Gitea 内置
 
