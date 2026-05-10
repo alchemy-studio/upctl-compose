@@ -10,7 +10,7 @@ function generateJwt(): string {
     token_id: "e2e-test",
     hty_id: null,
     app_id: null,
-    ts: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+    ts: new Date().toISOString().replace(/\.\d+Z$/, ""),
     roles: [{ role_key: "ADMIN" }],
     tags: [],
     current_org_id: null,
