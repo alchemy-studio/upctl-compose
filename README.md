@@ -9,7 +9,7 @@
 
 ---
 
-![工单列表](userguide/screenshots/05-main-page.png)
+📖 [**用户手册（PDF）**](https://github.com/alchemy-studio/upctl-compose/raw/main/userguide/userguide.pdf) — 部署步骤与操作详解
 
 **upctl-compose** 是一个开箱即用的工单管理系统。它把 [Gitea](https://about.gitea.com/) 作为工单后端，搭配 Vue 3 管理界面和 Rust API 服务，并通过 **DeepSeek V4 AI Agent** 自动处理已批准的工单，实现从创建到关闭的全链路自动化。
 
@@ -18,8 +18,6 @@
 ### 🤖 AI Agent 自动处理
 
 工单创建后打上 `approved` 标签，ai-agent 自动轮询、调用 DeepSeek 模型处理，评论结果并关闭工单，全程无需人工介入。
-
-![AI 处理流程](userguide/screenshots/05-ticket-list-with-data.png)
 
 > ai-agent 每 5 分钟轮询一次。也可通过 `docker compose exec ai-agent python3 /app/poll_worker.py --once` 手动触发即时处理。
 
@@ -30,7 +28,7 @@
 <img src="userguide/screenshots/01-login-page.png" width="680" alt="登录页"/>
 **登录页**
 
-<img src="userguide/screenshots/02-ticket-list.png" width="680" alt="工单列表"/>
+<img src="userguide/screenshots/05-ticket-list-with-data.png" width="680" alt="工单列表"/>
 **工单列表**
 
 <img src="userguide/screenshots/03-ticket-detail.png" width="680" alt="工单详情"/>
@@ -194,7 +192,7 @@ docker compose down -v
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — 系统架构、API 路由、序列图
 - [CLAUDE.md](CLAUDE.md) — 项目开发约定
-- `userguide/userguide.pdf` — 用户手册（幻灯片格式）
+- [用户手册（PDF）](https://github.com/alchemy-studio/upctl-compose/raw/main/userguide/userguide.pdf) — 幻灯片格式部署指南
 - `docker-compose.yml` — 完整服务配置
 
 ---
