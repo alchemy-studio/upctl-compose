@@ -30,7 +30,8 @@ async function loginViaForm(page: Page, username = "demo", password = "demo123")
 
 /** Navigate to a path on the app. JWT is in localStorage so auth state is preserved. */
 async function navigateTo(page: Page, path: string) {
-  await page.goto(`${BASE_URL}${path}`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  await page.waitForSelector('h1', { timeout: 10_000 });
 }
 
 test.describe("Image upload", () => {

@@ -226,7 +226,8 @@ test.describe("Project management page — UI flow", () => {
 
   test("project selector visible on create ticket page", async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE_URL}/tickets/new`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE_URL}/tickets/new`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+    await page.waitForSelector('h1', { timeout: 10_000 });
     await expect(page.locator("h1")).toContainText("新建工单");
     await expect(page.locator("text=关联项目")).toBeVisible();
   });
