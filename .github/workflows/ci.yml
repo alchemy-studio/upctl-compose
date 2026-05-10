@@ -29,7 +29,27 @@ jobs:
         run: echo "::add-mask::$DEEPSEEK_API_KEY"
 
       - name: Build images
-        run: docker compose build authcore authcoreadmin upctl-svc upctl-web ai-agent
+        timeout-minutes: 30
+        run: |
+          # Pull base images with retry (Docker Hub often rate-limits CI runners)
+          for img in rust:slim-bookworm node:22-alpine python:3.12-slim; do
+            echo "Pulling $img..."
+            pulled=false
+            for i in 1 2 3 4 5; do
+              if timeout 120 docker pull "$img" 2>&1; then
+                echo "OK: $img"
+                pulled=true
+                break
+              fi
+              if [ $i -lt 5 ]; then
+                w=$((i * 10))
+                echo "Pull attempt $i failed, retrying in ${w}s..."
+                sleep $w
+              fi
+            done
+            $pulled || echo "WARNING: could not pull $img, will rely on build cache"
+          done
+          docker compose build authcore authcoreadmin upctl-svc upctl-web ai-agent
 
       - name: Start dependencies (postgres + redis + gitea)
         run: |
