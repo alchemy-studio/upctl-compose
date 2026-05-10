@@ -112,26 +112,33 @@ def add_label(issue_num: int, label_id: int = 2):
     url = f"{GITEA_API_BASE}/tickets/{issue_num}/labels"
     try:
         resp = requests.post(url, json={"labels": [label_id]}, headers=jwt_headers(), timeout=15)
-        log(f"add_label #{issue_num}: {resp.status_code}")
+        ok = resp.ok and resp.json().get("r", False)
+        log(f"add_label #{issue_num}: {resp.status_code} r={ok}")
+        return ok
     except Exception as e:
         log(f"add_label #{issue_num} failed: {e}")
+        return False
 
 
 def remove_label(issue_num: int, label_id: int = 2):
     url = f"{GITEA_API_BASE}/tickets/{issue_num}/labels/{label_id}"
     try:
         resp = requests.delete(url, headers=jwt_headers(), timeout=15)
-        log(f"remove_label #{issue_num}: {resp.status_code}")
+        ok = resp.ok and resp.json().get("r", False)
+        log(f"remove_label #{issue_num}: {resp.status_code} r={ok}")
+        return ok
     except Exception as e:
         log(f"remove_label #{issue_num} failed: {e}")
+        return False
 
 
 def add_comment(issue_num: int, body: str):
     url = f"{GITEA_API_BASE}/tickets/{issue_num}/comments"
     try:
         resp = requests.post(url, json={"body": body}, headers=HEADERS, timeout=15)
+        ok = resp.ok and resp.json().get("r", False)
         log(f"add_comment #{issue_num}: {resp.status_code}")
-        return resp.ok
+        return ok
     except Exception as e:
         log(f"add_comment #{issue_num} failed: {e}")
         return False
@@ -175,8 +182,9 @@ def pick_and_process():
         log(f"Issue #{num} already in_progress, skipping")
         return False
 
-    # Add in_progress label
+    # Add in_progress label, remove approved label (id=1)
     add_label(num)
+    remove_label(num, 1)
 
     try:
         # Build the prompt for DeepSeek
