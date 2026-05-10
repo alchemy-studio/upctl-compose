@@ -127,6 +127,9 @@ jobs:
       - name: E2E — Gitea connectivity
         run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test gitea_connectivity
 
+      - name: E2E — Project archive
+        run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test project_archive
+
       - name: E2E — Ticket CRUD
         run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test create_and_close_ticket
 

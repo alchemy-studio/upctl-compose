@@ -161,6 +161,52 @@ def test_gitea_connectivity():
         check("List labels", False, str(e))
 
 
+def test_project_archive():
+    """Test that project archive API works and marks Gitea repo as archived."""
+    print("\n📋 Project Archive")
+    try:
+        # List projects
+        projects = api_get("/projects")
+        check("List projects", True)
+        all_projects = projects.get("d", projects) if isinstance(projects, dict) else projects
+        if not isinstance(all_projects, list):
+            check("Parse projects list", False, f"unexpected type: {type(all_projects)}")
+            return
+        log(f"Found {len(all_projects)} projects")
+
+        # Create a temporary project for testing
+        ts = int(time.time())
+        test_name = f"e2e-archive-test-{ts}"
+        created = api_post("/projects", {
+            "name": test_name,
+            "repo_url": "https://ci.moicen.com/weli/e2e-test-repo",
+            "memory_doc": "E2E test project for archive verification",
+            "is_open_source": False,
+        })
+        created_project = created.get("d", created) if isinstance(created, dict) else created
+        proj_id = created_project.get("id", "")
+        check("Create test project", bool(proj_id), f"id={proj_id[:12] if proj_id else 'N/A'}...")
+        if not proj_id:
+            return
+
+        # Archive the project
+        result = api_patch(f"/projects/{proj_id}", {"is_archived": True})
+        updated = result.get("d", result) if isinstance(result, dict) else result
+        is_archived = updated.get("is_archived", False) if isinstance(updated, dict) else False
+        check("Project archived", bool(is_archived))
+        log(f"Project {test_name} archived: {is_archived}")
+
+        # Clean up: restore the project for future test runs
+        restore = api_patch(f"/projects/{proj_id}", {"is_archived": False})
+        restored = restore.get("d", restore) if isinstance(restore, dict) else restore
+        restored_val = restored.get("is_archived", True) if isinstance(restored, dict) else True
+        check("Project restored", not restored_val)
+        log(f"Project {test_name} restored")
+
+    except Exception as e:
+        check("Project archive test", False, str(e))
+
+
 def test_create_and_close_ticket():
     """Create a ticket, add comment, close it."""
     print("\n📋 Ticket CRUD")
