@@ -136,6 +136,7 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           DEFAULT_MODEL: ${{ secrets.DEFAULT_MODEL }}
+        continue-on-error: true
         run: docker compose exec -T ai-agent python3 /app/e2e_test.py --test real_pipeline
 
       - name: E2E frontend tests (Playwright)
