@@ -1,6 +1,6 @@
 # upctl-compose
 
-> AI Agent 驱动的全自动工单处理平台 — 一键部署，智能响应。
+> AI Agent 驱动的全自动测试开发部署工作平台 — 一键部署，智能响应。
 
 [![Docker Compose](https://img.shields.io/badge/Docker_Compose-2.24%2B-2496ED?logo=docker)](https://docs.docker.com/compose/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
