@@ -81,3 +81,47 @@ test.describe("AuthCoreAdmin — Navigation", () => {
     await expect(page).toHaveURL(/\/admin\/?$/);
   });
 });
+
+test.describe("AuthCoreAdmin — User list sorting", () => {
+  test("shows sort buttons on users page", async ({ page }) => {
+    await login(page, "/users");
+    await expect(page.locator("h1")).toContainText("用户管理");
+    await expect(page.locator('button:has-text("姓名")')).toBeVisible();
+    await expect(page.locator('button:has-text("创建时间")')).toBeVisible();
+    await expect(page.locator('button:has-text("审核状态")')).toBeVisible();
+  });
+
+  test("sort by name toggles direction", async ({ page }) => {
+    await login(page, "/users");
+    // Default sort is by name ascending
+    const nameBtn = page.locator('button:has-text("姓名")');
+    await expect(nameBtn).toBeVisible();
+    // Click to toggle to descending
+    await nameBtn.click();
+    // The button should show ↓ after toggle
+    await expect(nameBtn).toContainText("↓");
+    // Click again to go back to ascending
+    await nameBtn.click();
+    await expect(nameBtn).toContainText("↑");
+  });
+
+  test("sort by created_at changes order", async ({ page }) => {
+    await login(page, "/users");
+    const timeBtn = page.locator('button:has-text("创建时间")');
+    await timeBtn.click();
+    await expect(timeBtn).toContainText("↑");
+    // Toggle to descending
+    await timeBtn.click();
+    await expect(timeBtn).toContainText("↓");
+  });
+
+  test("sort by status toggles direction", async ({ page }) => {
+    await login(page, "/users");
+    const statusBtn = page.locator('button:has-text("审核状态")');
+    await statusBtn.click();
+    await expect(statusBtn).toContainText("↑");
+    // Toggle to descending
+    await statusBtn.click();
+    await expect(statusBtn).toContainText("↓");
+  });
+});
