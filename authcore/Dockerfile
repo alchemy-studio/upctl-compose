@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y libpq-dev pkg-config git && rm -rf /var
 RUN cargo install diesel_cli --no-default-features --features postgres
 
 WORKDIR /app
-RUN git clone https://github.com/alchemy-studio/AuthCore.git . && git checkout 34b1823c83e7
+RUN git clone --depth 1 https://github.com/alchemy-studio/AuthCore.git .
 
 # Patch: bind to 0.0.0.0 so other containers can reach authcore
 RUN sed -i 's/127, 0, 0, 1/0, 0, 0, 0/g' htycommons/src/web.rs
