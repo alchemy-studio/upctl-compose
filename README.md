@@ -11,7 +11,7 @@
 
 📖 **用户指南**
 - [**用户手册（PDF）**](https://github.com/alchemy-studio/upctl-compose/raw/main/userguide/userguide.pdf) — 部署步骤与操作详解
-- [**Agent 可靠性工程 \& 系统架构（PDF）**](userguide/upctl-pitch.pdf) — 方法论与开源平台全景（含系统架构设计、请求流程、API 路由）
+- [**Agent 可靠性工程 & 系统架构（PDF）**](userguide/upctl-pitch.pdf) — 方法论与开源平台全景（含系统架构设计、请求流程、API 路由）
 
 构建方式：`./scripts/build-pdf.sh`（编译全部 PDF，详见 [build-pdf.sh](scripts/build-pdf.sh)）
 
@@ -198,7 +198,7 @@ docker compose down -v
 ## 相关文档
 
 - [**用户手册（PDF）**](https://github.com/alchemy-studio/upctl-compose/raw/main/userguide/userguide.pdf) — 部署步骤与操作详解
-- [**Agent 可靠性工程 \& 系统架构（PDF）**](userguide/upctl-pitch.pdf) — 方法论与开源平台全景
+- [**Agent 可靠性工程 & 系统架构（PDF）**](userguide/upctl-pitch.pdf) — 方法论与开源平台全景
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Markdown 版架构文档（权威来源）
 - [CLAUDE.md](CLAUDE.md) — 项目开发约定
 - [build-pdf.sh](scripts/build-pdf.sh) — PDF 统一构建脚本
