@@ -290,33 +290,33 @@
 \begin{frame}[shrink=3]{产品形态：三层架构}
   \begin{center}
     \begin{tikzpicture}[
-      sbox/.style={rectangle, draw, rounded corners, fill=white, minimum width=2.2cm, minimum height=0.55cm, align=center, font=\tiny},
-      scale=0.92
+      sbox/.style={rectangle, draw, rounded corners, fill=white, minimum width=1.7cm, minimum height=0.5cm, align=center, font=\tiny},
+      scale=0.85
     ]
 
     % --- 适配层 ---
-    \draw[rounded corners, fill=green!10, draw=black] (-5.8, 1.6) rectangle (5.8, 3.2);
+    \draw[rounded corners, fill=green!10, draw=black] (-6.5, 1.6) rectangle (6.5, 3.2);
     \node[font=\footnotesize\bfseries] at (0, 2.95) {适配层 (MCP / API)};
-    \node[sbox] at (-3.6, 2.3) {Claude Code};
+    \node[sbox] at (-4.0, 2.3) {Claude Code};
     \node[sbox] at (0, 2.3) {OpenAI GPT-4};
-    \node[sbox] at (3.6, 2.3) {Local Model};
+    \node[sbox] at (4.0, 2.3) {Local Model};
 
     % --- 引擎层 ---
-    \draw[rounded corners, fill=myyellow!10, draw=black] (-5.8, -0.05) rectangle (5.8, 1.4);
-    \node[font=\footnotesize\bfseries] at (0, 1.15) {引擎层 (Rust)};
-    \node[sbox] at (-4.2, 0.6) {tmux Runtime};
-    \node[sbox] at (-2.1, 0.6) {Memory Mgr};
-    \node[sbox] at (0, 0.6) {Validate};
-    \node[sbox] at (2.1, 0.6) {Instrum.};
-    \node[sbox] at (4.2, 0.6) {Pipeline};
+    \draw[rounded corners, fill=myyellow!10, draw=black] (-6.5, -0.2) rectangle (6.5, 1.4);
+    \node[font=\footnotesize\bfseries] at (0, 1.1) {引擎层 (Rust)};
+    \node[sbox] at (-4.0, 0.5) {tmux Runtime};
+    \node[sbox] at (-2.0, 0.5) {Memory Mgr};
+    \node[sbox] at (0, 0.5) {Validate};
+    \node[sbox] at (2.0, 0.5) {Instrum.};
+    \node[sbox] at (4.0, 0.5) {Pipeline};
 
     % --- CLI 层 ---
-    \draw[rounded corners, fill=myblue!10, draw=black] (-5.8, -1.55) rectangle (5.8, -0.25);
-    \node[font=\footnotesize\bfseries] at (0, -0.5) {CLI / TUI 控制面};
-    \node[sbox, minimum width=2.6cm] at (-3.75, -1.0) {\texttt{upctl init}};
-    \node[sbox, minimum width=2.6cm] at (-1.15, -1.0) {\texttt{upctl deploy}};
-    \node[sbox, minimum width=2.6cm] at (1.45, -1.0) {\texttt{upctl monitor}};
-    \node[sbox, minimum width=2.6cm] at (4.05, -1.0) {\texttt{upctl compact}};
+    \draw[rounded corners, fill=myblue!10, draw=black] (-6.5, -1.7) rectangle (6.5, -0.35);
+    \node[font=\footnotesize\bfseries] at (0, -0.6) {CLI / TUI 控制面};
+    \node[sbox, minimum width=2.4cm] at (-4.0, -1.1) {\texttt{upctl init}};
+    \node[sbox, minimum width=2.4cm] at (-1.33, -1.1) {\texttt{upctl deploy}};
+    \node[sbox, minimum width=2.4cm] at (1.33, -1.1) {\texttt{upctl monitor}};
+    \node[sbox, minimum width=2.4cm] at (4.0, -1.1) {\texttt{upctl compact}};
 
     \end{tikzpicture}
   \end{center}
@@ -340,42 +340,56 @@
 \begin{center}
 \begin{tikzpicture}[
   svc/.style={rectangle, draw, rounded corners, minimum width=1.8cm, minimum height=0.5cm, align=center, font=\tiny},
-  scale=0.65
+  scale=0.62
 ]
-  \node[svc, fill=green!15] (user) at (-6, 4.5) {用户浏览器};
+  \node[svc, fill=green!15] (user) at (-7, 4) {用户浏览器};
 
-  \draw[dashed, rounded corners, thick, gray] (-8, 3.5) rectangle (8, -2.5);
-  \node[font=\tiny, gray] at (7.5, 3.2) {upctl-compose 容器网络};
+  \draw[dashed, rounded corners, thick, gray] (-8.5, 3) rectangle (8.5, -3);
+  \node[font=\tiny, gray] at (8, 2.7) {upctl-compose 容器网络};
 
-  \node[svc, fill=blue!15] (nginx) at (-6, 2) {nginx};
-  \node[svc, fill=green!15] (web) at (-3, 2) {upctl-web};
-  \node[svc, fill=orange!15] (auth) at (-6, 0) {authcore};
-  \node[svc, fill=purple!15] (svc) at (-2, 0) {upctl-svc};
-  \node[svc, fill=teal!15] (gitea) at (2, 0) {Gitea};
-  \node[svc, fill=yellow!15] (pg) at (-6, -2) {PostgreSQL};
-  \node[svc, fill=red!15] (ai) at (2, -2) {ai-agent};
-  \node[svc, fill=gray!15] (redis) at (6, 0) {redis};
+  % Row 1: web at top center
+  \node[svc, fill=green!15] (web) at (0, 2) {upctl-web};
 
-  \node[draw, thick, rounded corners, fill=cyan!10, font=\tiny] (ds) at (2, -3.5) {DeepSeek API};
+  % Row 2: nginx hub
+  \node[svc, fill=blue!15] (nginx) at (-1.5, 0.5) {nginx};
 
-  \draw[->,thick] (user) -- (nginx);
-  \draw[->,thick] (nginx) -- (web);
-  \draw[->,thick] (nginx) -- (auth);
+  % Row 3: services
+  \node[svc, fill=orange!15] (auth) at (-5.5, -1) {authcore};
+  \node[svc, fill=purple!15] (svc) at (-1.5, -1) {upctl-svc};
+  \node[svc, fill=teal!15] (gitea) at (2.5, -1) {Gitea};
+  \node[svc, fill=gray!15] (redis) at (6, -1) {redis};
+
+  % Row 4: data / workers
+  \node[svc, fill=yellow!15] (pg) at (-5.5, -2.5) {PostgreSQL};
+  \node[svc, fill=red!15] (ai) at (2.5, -2.5) {ai-agent};
+  \node[draw, thick, rounded corners, fill=cyan!10, font=\tiny] (ds) at (6, -2.5) {DeepSeek API};
+
+  % Arrows — user → web → nginx
+  \draw[->,thick] (user) -- (-3.5, 4) |- (nginx);
+  \draw[->,thick] (web) -- (nginx);
+
+  % Arrows — nginx outgoing to backend services (orthogonal paths)
+  \draw[->,thick] (nginx) -- (-1.5, -0.3) -- (-5.5, -0.3) -- (auth);
   \draw[->,thick] (nginx) -- (svc);
-  \draw[->,thick] (nginx) -- (gitea);
+  \draw[->,thick] (nginx) -- (0.5, 0.5) -- (2.5, 0.5) -- (gitea);
   \draw[->,thick] (svc) -- (gitea);
-  \draw[->,thick] (ai) -- (svc);
-  \draw[->,thick] (auth) -- (pg);
-  \draw[->,thick] (gitea) -- (pg);
-  \draw[->,thick] (svc) -- (redis);
-  \draw[->,thick,dashed] (ai) -- (ds);
+  \draw[->,thick] (svc) -- (1.5, -1) -- (6, -1) -- (redis);
 
-  \node[font=\tiny, right] at ([yshift=2pt]nginx.east) {:8088};
-  \node[font=\tiny, right] at ([yshift=2pt]auth.east) {:3000};
-  \node[font=\tiny, right] at ([yshift=2pt]svc.east) {:3005};
-  \node[font=\tiny, right] at ([yshift=2pt]gitea.east) {:3001};
-  \node[font=\tiny, right] at ([yshift=2pt]pg.east) {:5432};
-  \node[font=\tiny, right] at ([yshift=2pt]redis.east) {:6379};
+  % Arrows — auth ↔ pg, gitea ↔ pg
+  \draw[->,thick] (auth) -- (pg);
+  \draw[->,thick] (gitea) |- (pg);
+
+  % Arrows — ai ↔ svc, ai → ds
+  \draw[->,thick] (ai) -- (0.5, -2.5) |- (svc);
+  \draw[->,thick] (ai) -- (ds);
+
+  % Port labels
+  \node[font=\tiny, right] at ([xshift=0.3cm]nginx.east) {:8088};
+  \node[font=\tiny, right] at ([xshift=0.3cm]auth.east) {:3000};
+  \node[font=\tiny, right] at ([xshift=0.3cm]svc.east) {:3005};
+  \node[font=\tiny, right] at ([xshift=0.3cm]gitea.east) {:3001};
+  \node[font=\tiny, right] at ([xshift=0.3cm]redis.east) {:6379};
+  \node[font=\tiny, right] at ([xshift=0.3cm]pg.east) {:5432};
 \end{tikzpicture}
 \end{center}
 
@@ -383,9 +397,10 @@
 全部服务通过 Docker Compose 组网，共享 postgres 数据库和 redis 缓存。
 \end{frame}
 
-\begin{frame}{服务列表}
+\begin{frame}[shrink=12]{服务列表}
   \begin{table}
-    \fontsize{8}{10}\selectfont
+    \fontsize{7}{9}\selectfont
+    \renewcommand{\arraystretch}{1.1}
     \begin{tabular}{lcl}
       \toprule
       服务 & 端口 & 职责 \\
@@ -403,7 +418,7 @@
     \end{tabular}
   \end{table}
 
-  \vspace{6pt}
+  \vspace{4pt}
   \textbf{数据持久化：}
   \begin{itemize}
     \item PostgreSQL 数据：\texttt{pgdata} 卷
@@ -465,17 +480,21 @@
       \node[block, fill=teal!20, right=of svc] (gitea) {Gitea};
       \node[block, fill=cyan!20, right=of gitea] (ds) {DeepSeek API};
 
-      % Arrow 1: Poll
-      \draw[->, thick] ([yshift=0.3cm]ai.east) -- node[above] {每 5m 轮询} ([yshift=0.3cm]svc.west);
-      \draw[->, thick] ([yshift=0.3cm]svc.east) -- node[above] {查 approved 工单} ([yshift=0.3cm]gitea.west);
-      \draw[->, thick, dashed] ([yshift=0.3cm]gitea.west) -- ([yshift=0.3cm]svc.east);
-      \draw[->, thick, dashed] ([yshift=0.3cm]svc.west) -- ([yshift=0.3cm]ai.east);
+      % Row 1 (top offset +0.4): polling forward
+      \draw[->, thick] ([yshift=0.4cm]ai.east) -- node[above] {每 5m 轮询} ([yshift=0.4cm]svc.west);
+      \draw[->, thick] ([yshift=0.4cm]svc.east) -- node[above] {查 approved 工单} ([yshift=0.4cm]gitea.west);
 
-      % Arrow 2: Process
-      \draw[->, thick] ([yshift=-0.3cm]ai.east) -- node[below] {加 in\_progress} ([yshift=-0.3cm]svc.west);
-      \draw[->, thick] ([yshift=-0.3cm]svc.east) -- node[below] {调用 API} ([yshift=-0.3cm]gitea.west);
-      \draw[->, thick] ([yshift=-0.3cm]gitea.east) -- node[below] {发送工单} (ds);
-      \draw[->, thick, dashed] (ds.south) ++(-0.3,0) -- ++(0,-0.5) -| node[below, xshift=-0.5cm] {处理结果} ([yshift=-1.2cm]ai.south) -- ([yshift=-0.6cm]ai.south);
+      % Row 1 return (midline): dashed polling loop back
+      \draw[->, thick, dashed] ([yshift=0cm]gitea.west) -- ([yshift=0cm]svc.east);
+      \draw[->, thick, dashed] ([yshift=0cm]svc.west) -- ([yshift=0cm]ai.east);
+
+      % Row 2 (bottom offset -0.4): processing forward
+      \draw[->, thick] ([yshift=-0.4cm]ai.east) -- node[below] {加 in\_progress} ([yshift=-0.4cm]svc.west);
+      \draw[->, thick] ([yshift=-0.4cm]svc.east) -- node[below] {调用 API} ([yshift=-0.4cm]gitea.west);
+      \draw[->, thick] ([yshift=-0.4cm]gitea.east) -- node[below] {发送工单} (ds);
+
+      % Feedback loop: ds → down → under all → up → ai
+      \draw[->, thick, dashed] (ds.south) -- ++(0, -0.6) -| node[below, xshift=-1cm] {处理结果} (ai.south);
     \end{tikzpicture}
   \end{center}
 
