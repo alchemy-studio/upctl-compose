@@ -9,7 +9,11 @@
 
 ---
 
-📖 [**用户手册（PDF）**](https://github.com/alchemy-studio/upctl-compose/raw/main/userguide/userguide.pdf) — 部署步骤与操作详解
+📖 **用户指南**
+- [**用户手册（PDF）**](https://github.com/alchemy-studio/upctl-compose/raw/main/userguide/userguide.pdf) — 部署步骤与操作详解
+- [**Agent 可靠性工程 \& 系统架构（PDF）**](userguide/upctl-pitch.pdf) — 方法论与开源平台全景（含系统架构设计、请求流程、API 路由）
+
+构建方式：`./scripts/build-pdf.sh`（编译全部 PDF，详见 [build-pdf.sh](scripts/build-pdf.sh)）
 
 **upctl-compose** 是一个开箱即用的工单管理系统。它把 [Gitea](https://about.gitea.com/) 作为工单后端，搭配 Vue 3 管理界面和 Rust API 服务，并通过 **DeepSeek V4 AI Agent** 自动处理已批准的工单，实现从创建到关闭的全链路自动化。
 
@@ -193,9 +197,11 @@ docker compose down -v
 
 ## 相关文档
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — 系统架构、API 路由、序列图
+- [**用户手册（PDF）**](https://github.com/alchemy-studio/upctl-compose/raw/main/userguide/userguide.pdf) — 部署步骤与操作详解
+- [**Agent 可靠性工程 \& 系统架构（PDF）**](userguide/upctl-pitch.pdf) — 方法论与开源平台全景
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Markdown 版架构文档（权威来源）
 - [CLAUDE.md](CLAUDE.md) — 项目开发约定
-- [用户手册（PDF）](https://github.com/alchemy-studio/upctl-compose/raw/main/userguide/userguide.pdf) — 幻灯片格式部署指南
+- [build-pdf.sh](scripts/build-pdf.sh) — PDF 统一构建脚本
 - `docker-compose.yml` — 完整服务配置
 
 ---

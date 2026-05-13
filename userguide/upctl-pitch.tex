@@ -1,0 +1,697 @@
+\documentclass[12pt,aspectratio=169,utf8]{beamer}
+
+\usepackage{ctex}
+\setCJKmainfont{Songti SC}
+\setCJKsansfont{Heiti SC}
+\setCJKmonofont{Heiti SC}
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{positioning,decorations.pathreplacing}
+\usepackage{fontawesome5}
+\usepackage{hyperref}
+\usepackage{fancyvrb}
+
+\usetheme{Copenhagen}
+\usecolortheme{default}
+
+% --- Custom colors ---
+\definecolor{mygreen}{RGB}{34,139,34}
+\definecolor{myblue}{RGB}{0,102,204}
+\definecolor{myred}{RGB}{220,50,50}
+\definecolor{myyellow}{RGB}{255,170,0}
+\definecolor{mygray}{RGB}{120,120,120}
+\definecolor{mybg}{RGB}{248,248,252}
+
+\setbeamercolor{background canvas}{bg=mybg}
+\setbeamercolor{frametitle}{bg=mybg,fg=myblue}
+\setbeamercolor{title}{fg=myblue}
+\setbeamercolor{subtitle}{fg=mygray}
+\setbeamercolor{block title}{bg=myblue,fg=white}
+\setbeamercolor{block body}{bg=white}
+\setbeamercolor{alerted text}{fg=myred}
+
+\setbeamertemplate{itemize item}{\textbullet}
+\setbeamertemplate{itemize subitem}{--}
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{section in toc}{\inserttocsectionnumber.~\inserttocsection}
+
+\DefineVerbatimEnvironment{code}{Verbatim}{fontsize=\tiny,frame=single}
+
+\title{\textbf{Agent Reliability Engineering}\\[4pt]{\Large 从方法论到开源平台的落地方案}}
+\subtitle{upctl --- Agent 可靠性 PaaS，Make Your Agent Survive Production}
+\author{Wei Nan Li}
+\date{\today}
+\institute{\textbf{鉬馨玥翼}~\textregistered\\[2pt]{\small RI XINYUE YI}}
+
+\begin{document}
+
+% ============================================
+% Title
+% ============================================
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+\begin{frame}[shrink=10]{目录}
+  \tableofcontents
+\end{frame}
+
+% ============================================
+% The Problem
+% ============================================
+\section{问题与动机}
+
+\begin{frame}[shrink=3]{Demo 做完之后，Agent 为什么活不下去}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Demo 阶段}
+      \begin{itemize}
+        \item model + prompt 即可出效果
+        \item 跑一次给老板看 → Done
+        \item 不需要考虑可靠性
+      \end{itemize}
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{生产阶段}
+      \begin{itemize}
+        \item 上下文爆炸，token 成本失控
+        \item 同样的 prompt 昨天能用，今天崩了
+        \item Agent 长期运行迷失方向
+        \item compact 后丢失关键决策
+        \item 没有人知道"刚才发生了什么"
+      \end{itemize}
+    \end{block}
+  \end{columns}
+
+  \vspace{2pt}
+  \begin{alertblock}{核心判断}
+    \footnotesize\textbf{Agent 工程化的最大瓶颈不是模型能力，而是缺乏一套让模型能够持续优化自身工作过程的工程体系。}
+  \end{alertblock}
+\end{frame}
+
+% ============================================
+% The Core Loop
+% ============================================
+\begin{frame}{自举 + 迭代：让 LLM 优化自身的工作流}
+  \begin{center}
+    \begin{tikzpicture}[node distance=3.0cm and 3.2cm, auto]
+      \tikzset{block/.style={rectangle, draw, rounded corners, minimum width=2.0cm, minimum height=0.7cm, align=center, font=\footnotesize}}
+      \tikzset{arrow/.style={->, >=stealth, thick}}
+
+      \node[block, fill=green!20] (manual)   {手动验证};
+      \node[block, fill=blue!20, right=of manual] (script) {固化脚本};
+      \node[block, fill=blue!20, right=of script] (ci)    {定时触发 / CI};
+      \node[block, fill=yellow!20, below=of ci] (collect) {自动收集反馈};
+      \node[block, fill=yellow!20, left=of collect] (debug) {分析 Debug 信息};
+      \node[block, fill=red!20, left=of debug] (distill)  {蒸馏 / 优化};
+
+      \draw[arrow] (manual) -- (script);
+      \draw[arrow] (script) -- (ci);
+      \draw[arrow] (ci) -- (collect);
+      \draw[arrow] (collect) -- (debug);
+      \draw[arrow] (debug) -- (distill);
+      \draw[arrow] (distill) -- (manual);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{6pt}
+  \begin{quote}
+    \centering\small
+    不是一次性配置好就完事，而是构建一套\textbf{能持续自我改进的机制}
+  \end{quote}
+\end{frame}
+
+% ============================================
+% Five Layer Practice
+% ============================================
+\begin{frame}[shrink=5]{五层工程化实践（按成熟度排序）}
+  \begin{center}
+    \begin{tikzpicture}[node distance=0.7cm]
+      \tikzset{layer/.style={rectangle, draw, rounded corners, minimum width=10.5cm, minimum height=0.55cm, align=center, font=\tiny}}
+
+      \node[layer, fill=myred!10]   (l5) {5.\ \ 强类型驯服不确定性 —— Rust enum/Option 约束 LLM 输出结构};
+      \node[layer, fill=myyellow!15, below=of l5] (l4) {4.\ \ 埋点驱动迭代 —— 三层 debug 信息 → 数据飞轮};
+      \node[layer, fill=myyellow!15, below=of l4] (l3) {3.\ \ Compact 卡点解法 —— 混合记忆策略：压缩前提取 + 压缩后注入};
+      \node[layer, fill=myblue!15, below=of l3] (l2) {2.\ \ tmux 作为 Agent 运行时 —— 持久化 + 进程管理 + 脚本观测};
+      \node[layer, fill=myblue!15, below=of l2] (l1) {1.\ \ 复杂流程固化 —— 脚本 / API，不让 LLM 重复学习};
+
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{6pt}
+  {\small 每层的共性不是"让模型更强"，而是\textbf{把人的工程判断逐步沉淀为系统能力}。}
+\end{frame}
+
+% ============================================
+% Differentiator: tmux Runtime
+% ============================================
+\begin{frame}[shrink=8]{差异化记忆点：tmux 作为 Agent 运行时}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    \begin{block}{为什么用 tmux？}
+      \begin{itemize}
+        \item \textbf{持久化上下文}：LLM 状态不因单次 API 调用结束而丢失
+        \item \textbf{脚本可观测}：capture-pane 读取输出，不干扰推理
+        \item \textbf{崩溃恢复}：tmux session 独立于进程
+        \item \textbf{交互信道}：send-keys 注入指令，无需重新建连
+      \end{itemize}
+    \end{block}
+
+    \column{0.43\textwidth}
+    \begin{block}{行业中独一无二}
+      没有人用 tmux 做 agent runtime，但它恰好解决了"agent 崩溃恢复、脚本观测、不打断上下文"三个痛点。
+    \end{block}
+  \end{columns}
+
+  \vspace{2pt}
+  \begin{exampleblock}{示例}
+    \footnotesize\texttt{tmux send-keys -t claude "analyze logs" Enter}\\[0pt]
+    \footnotesize\texttt{tmux capture-pane -t claude -p > latest\_output.txt}
+  \end{exampleblock}
+\end{frame}
+
+% ============================================
+% Competitive Landscape
+% ============================================
+\section{竞争格局分析}
+
+\begin{frame}{竞争定位：Agent 可靠性工程}
+  \begin{center}
+    \begin{tikzpicture}[scale=0.82]
+      \draw[->,thick] (-1,0) -- (9,0) node[right] {\small 产品形态};
+      \draw[->,thick] (0,-1) -- (0,5.2) node[above] {\small 可靠性};
+
+      \node[font=\footnotesize] at (3,4.8) {观察性为主};
+      \node[font=\footnotesize] at (1.5,4.0) {LangSmith};
+      \node[font=\footnotesize] at (2,3.4) {Langfuse};
+
+      \node[font=\footnotesize] at (7,4.8) {方法论 + 平台};
+      \node[font=\footnotesize,text=myred] at (7,4.0) {\textbf{[upctl]}};
+
+      \node[font=\footnotesize] at (5,1.2) {框架 / 工具};
+      \node[font=\footnotesize] at (4,2) {LangChain};
+      \node[font=\footnotesize] at (5.5,1.8) {CrewAI};
+      \node[font=\footnotesize] at (3,1.5) {Claude Code};
+      \node[font=\footnotesize] at (7,1.5) {Cursor};
+
+      \node[font=\footnotesize] at (5,1) {Dify / Coze};
+
+      \node[font=\footnotesize] at (6.5,1.2) {应用层};
+
+      \node[font=\footnotesize] at (7,0.7) {OpenClaw};
+
+      \draw[fill=myred,draw=myred,opacity=0.15] (5.5,3.0) circle (1.8cm);
+      \node[font=\footnotesize,text=myred] at (5.5,5.0) {空白区};
+
+      \draw[dashed,gray] (0,2.8) -- (9,2.8);
+      \node[font=\footnotesize,gray] at (4.5,2.65) {--- 生产就绪分水岭 ---};
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\begin{frame}{竞品对标矩阵}
+  \scriptsize
+  \renewcommand{\arraystretch}{0.9}
+  \begin{tabular}{lccccccc}
+    \toprule
+    & \textbf{LangSmith} & \textbf{CrewAI} & \textbf{Claude Code} & \textbf{Dify} & \textbf{OpenClaw} & \textbf{upctl} \\
+    \midrule
+    可观测性/埋点 & \textcolor{mygreen}{\faCheck} & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{mygreen}{\faCheck} & \textcolor{myred}{\faTimes} & \textcolor{mygreen}{\faCheck} \\[1pt]
+    Agent 持久化运行时 & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{myyellow}{部分} & \textcolor{myred}{\faTimes} & \textcolor{mygreen}{\faCheck} & \textcolor{mygreen}{\faCheck} \\[1pt]
+    Compact 策略 & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{myyellow}{内置} & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{mygreen}{\faCheck} \\[1pt]
+    自举方法论 & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{mygreen}{\faCheck} \\[1pt]
+    跨模型适配 & \textcolor{mygreen}{\faCheck} & \textcolor{mygreen}{\faCheck} & \textcolor{myred}{\faTimes} & \textcolor{mygreen}{\faCheck} & \textcolor{mygreen}{\faCheck} & \textcolor{mygreen}{\faCheck} \\[1pt]
+    私有化部署 & \textcolor{myyellow}{企业版} & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{myyellow}{企业版} & \textcolor{mygreen}{\faCheck} & \textcolor{mygreen}{\faCheck} \\[1pt]
+    强类型校验 & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{myred}{\faTimes} & \textcolor{mygreen}{\faCheck} \\[1pt]
+    开源 & \textcolor{myred}{\faTimes} & \textcolor{mygreen}{\faCheck} & \textcolor{myred}{\faTimes} & \textcolor{mygreen}{\faCheck} & \textcolor{mygreen}{\faCheck} & \textcolor{mygreen}{\faCheck} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{4pt}
+  \begin{alertblock}{关键发现}
+    \footnotesize\textbf{Agent 可靠性工程}这个品类目前\textbf{有需求但没有人系统性地做}。LangSmith 偏观测，Dify/OpenClaw 偏应用搭建，中间地带是空白。
+  \end{alertblock}
+\end{frame}
+
+% ============================================
+% vs OpenClaw
+% ============================================
+\begin{frame}[shrink=3]{upctl vs OpenClaw：不同层次，互补而非竞争}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{OpenClaw — 应用层}
+      \footnotesize
+      \begin{itemize}
+        \item 个人 AI 助手产品，跑在用户自己的设备上
+        \item 多渠道接入（WhatsApp/Telegram/Discord/\ldots）
+        \item Voice Wake、Live Canvas、技能系统
+        \item 类比：\textbf{给 Agent 一个"身体"}
+      \end{itemize}
+      \vspace{4pt}
+      \centering\footnotesize 369K+ GitHub Stars
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{upctl — 基础设施层}
+      \footnotesize
+      \begin{itemize}
+        \item Agent 可靠性 PaaS，保障生产稳定运行
+        \item 持久化运行时 + Compact 策略 + 埋点飞轮
+        \item TMUX 运行时 + Rust 强类型校验
+        \item 类比：\textbf{给 Agent 一副"骨骼"}
+      \end{itemize}
+      \vspace{4pt}
+      \centering\footnotesize Agent 可靠性工程品类定义者
+    \end{block}
+  \end{columns}
+
+  \vspace{10pt}
+  \begin{center}
+    \begin{tikzpicture}
+      \draw[->,thick] (0,0) -- (10,0) node[right] {\small 从应用到基础设施};
+      \node[font=\footnotesize] at (2,0.8) {\textbf{OpenClaw}};
+      \node[font=\footnotesize] at (2,0.35) {\tiny 应用层：让 Agent 到处可用};
+      \node[font=\footnotesize,text=myred] at (8,0.8) {\textbf{upctl}};
+      \node[font=\footnotesize,text=myred] at (8,0.35) {\tiny 基础设施层：让 Agent 别挂};
+      \draw[decorate,decoration={brace,amplitude=6pt}] (1.5,1.5) -- (8.5,1.5) node[midway,above=8pt,font=\footnotesize] {可以协同工作：OpenClaw 的 Agent 可以跑在 upctl 上};
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+% ============================================
+% Product Architecture
+% ============================================
+\section{产品架构}
+
+\begin{frame}[shrink=3]{产品形态：三层架构}
+  \begin{center}
+    \begin{tikzpicture}[
+      sbox/.style={rectangle, draw, rounded corners, fill=white, minimum width=2.2cm, minimum height=0.55cm, align=center, font=\tiny},
+      scale=0.92
+    ]
+
+    % --- 适配层 ---
+    \draw[rounded corners, fill=green!10, draw=black] (-5.8, 1.6) rectangle (5.8, 3.2);
+    \node[font=\footnotesize\bfseries] at (0, 2.95) {适配层 (MCP / API)};
+    \node[sbox] at (-3.6, 2.3) {Claude Code};
+    \node[sbox] at (0, 2.3) {OpenAI GPT-4};
+    \node[sbox] at (3.6, 2.3) {Local Model};
+
+    % --- 引擎层 ---
+    \draw[rounded corners, fill=myyellow!10, draw=black] (-5.8, -0.05) rectangle (5.8, 1.4);
+    \node[font=\footnotesize\bfseries] at (0, 1.15) {引擎层 (Rust)};
+    \node[sbox] at (-4.2, 0.6) {tmux Runtime};
+    \node[sbox] at (-2.1, 0.6) {Memory Mgr};
+    \node[sbox] at (0, 0.6) {Validate};
+    \node[sbox] at (2.1, 0.6) {Instrum.};
+    \node[sbox] at (4.2, 0.6) {Pipeline};
+
+    % --- CLI 层 ---
+    \draw[rounded corners, fill=myblue!10, draw=black] (-5.8, -1.55) rectangle (5.8, -0.25);
+    \node[font=\footnotesize\bfseries] at (0, -0.5) {CLI / TUI 控制面};
+    \node[sbox, minimum width=2.6cm] at (-3.75, -1.0) {\texttt{upctl init}};
+    \node[sbox, minimum width=2.6cm] at (-1.15, -1.0) {\texttt{upctl deploy}};
+    \node[sbox, minimum width=2.6cm] at (1.45, -1.0) {\texttt{upctl monitor}};
+    \node[sbox, minimum width=2.6cm] at (4.05, -1.0) {\texttt{upctl compact}};
+
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0pt}
+  {\footnotesize
+  \begin{itemize}
+    \setlength{\itemsep}{1pt}
+    \item 引擎层用 Rust 实现，单二进制分发，零运行时依赖（除 tmux）
+    \item 适配层通过 MCP 协议对接不同模型供应商
+    \item CLI 是所有操作的门面，不依赖 Web UI
+  \end{itemize}}
+\end{frame}
+
+% ============================================
+% System Architecture (from design.tex + ARCHITECTURE.md)
+% ============================================
+\section{系统架构}
+
+\begin{frame}[shrink=10]{upctl-compose 系统总览}
+\begin{center}
+\begin{tikzpicture}[
+  svc/.style={rectangle, draw, rounded corners, minimum width=1.8cm, minimum height=0.5cm, align=center, font=\tiny},
+  scale=0.65
+]
+  \node[svc, fill=green!15] (user) at (-6, 4.5) {用户浏览器};
+
+  \draw[dashed, rounded corners, thick, gray] (-8, 3.5) rectangle (8, -2.5);
+  \node[font=\tiny, gray] at (7.5, 3.2) {upctl-compose 容器网络};
+
+  \node[svc, fill=blue!15] (nginx) at (-6, 2) {nginx};
+  \node[svc, fill=green!15] (web) at (-3, 2) {upctl-web};
+  \node[svc, fill=orange!15] (auth) at (-6, 0) {authcore};
+  \node[svc, fill=purple!15] (svc) at (-2, 0) {upctl-svc};
+  \node[svc, fill=teal!15] (gitea) at (2, 0) {Gitea};
+  \node[svc, fill=yellow!15] (pg) at (-6, -2) {PostgreSQL};
+  \node[svc, fill=red!15] (ai) at (2, -2) {ai-agent};
+  \node[svc, fill=gray!15] (redis) at (6, 0) {redis};
+
+  \node[draw, thick, rounded corners, fill=cyan!10, font=\tiny] (ds) at (2, -3.5) {DeepSeek API};
+
+  \draw[->,thick] (user) -- (nginx);
+  \draw[->,thick] (nginx) -- (web);
+  \draw[->,thick] (nginx) -- (auth);
+  \draw[->,thick] (nginx) -- (svc);
+  \draw[->,thick] (nginx) -- (gitea);
+  \draw[->,thick] (svc) -- (gitea);
+  \draw[->,thick] (ai) -- (svc);
+  \draw[->,thick] (auth) -- (pg);
+  \draw[->,thick] (gitea) -- (pg);
+  \draw[->,thick] (svc) -- (redis);
+  \draw[->,thick,dashed] (ai) -- (ds);
+
+  \node[font=\tiny, right] at ([yshift=2pt]nginx.east) {:8088};
+  \node[font=\tiny, right] at ([yshift=2pt]auth.east) {:3000};
+  \node[font=\tiny, right] at ([yshift=2pt]svc.east) {:3005};
+  \node[font=\tiny, right] at ([yshift=2pt]gitea.east) {:3001};
+  \node[font=\tiny, right] at ([yshift=2pt]pg.east) {:5432};
+  \node[font=\tiny, right] at ([yshift=2pt]redis.east) {:6379};
+\end{tikzpicture}
+\end{center}
+
+\textbf{说明：} nginx (:8088) 做反向代理，将静态文件、API 请求按路径路由到对应后端服务。\\
+全部服务通过 Docker Compose 组网，共享 postgres 数据库和 redis 缓存。
+\end{frame}
+
+\begin{frame}{服务列表}
+  \begin{table}
+    \fontsize{8}{10}\selectfont
+    \begin{tabular}{lcl}
+      \toprule
+      服务 & 端口 & 职责 \\
+      \midrule
+      \textbf{nginx} & :8088 & 反向代理，路由静态文件与 API 请求 \\
+      \textbf{upctl-web} & (nginx 内) & Vue 3 工单管理前端 \\
+      \textbf{upctl-svc} & :3005 & Rust 工单 CRUD API（Gitea 代理 + 附件） \\
+      \textbf{authcore} & :3000 & 身份认证，JWT 签发 \\
+      \textbf{authcoreadmin} & :8089 & 用户与角色管理后台（Vue 3） \\
+      \textbf{ai-agent} & --- & Python AI 工单处理 worker \\
+      \textbf{Gitea} & :3001 & 代码托管 + CI + 工单追踪 \\
+      \textbf{PostgreSQL} & :5432 & 全局数据库 \\
+      \textbf{Redis} & :6379 & 缓存 / session 存储 \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+
+  \vspace{6pt}
+  \textbf{数据持久化：}
+  \begin{itemize}
+    \item PostgreSQL 数据：\texttt{pgdata} 卷
+    \item Gitea 数据：\texttt{gitea} 卷
+    \item 附件上传：\texttt{uploads} 卷
+    \item AI agent 工作区：\texttt{agent-workspace} 卷
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[shrink=10]{请求流程（序列图）}
+  \begin{center}
+    \begin{tikzpicture}[font=\tiny]
+      \tikzset{actor/.style={rectangle, draw, minimum width=1.3cm, minimum height=0.35cm, font=\tiny, align=center}};
+      \tikzset{arrow/.style={->, >=stealth, thick, font=\tiny}};
+
+      % Lifelines
+      \node[actor, fill=green!20] (user) at (0, 5.5) {浏览器};
+      \node[actor, fill=blue!20] (nginx) at (2.5, 5.5) {nginx};
+      \node[actor, fill=green!20] (web) at (5, 5.5) {upctl-web};
+      \node[actor, fill=orange!20] (auth) at (7.5, 5.5) {authcore};
+      \node[actor, fill=purple!20] (svc) at (10, 5.5) {upctl-svc};
+      \node[actor, fill=teal!20] (gitea) at (12.5, 5.5) {Gitea};
+
+      % Dashed lifelines
+      \draw[dashed, gray] (0, 5.15) -- (0, 0.5);
+      \draw[dashed, gray] (2.5, 5.15) -- (2.5, 0.5);
+      \draw[dashed, gray] (5, 5.15) -- (5, 0.5);
+      \draw[dashed, gray] (7.5, 5.15) -- (7.5, 0.5);
+      \draw[dashed, gray] (10, 5.15) -- (10, 0.5);
+      \draw[dashed, gray] (12.5, 5.15) -- (12.5, 0.5);
+
+      % Step 1: GET /
+      \draw[arrow] (0, 4.8) -- node[above, pos=0.3] {GET /} (2.5, 4.8);
+      \draw[arrow] (2.5, 4.6) -- node[above, pos=0.3] {静态文件} (5, 4.6);
+      \draw[arrow, dashed] (5, 4.4) -- node[above, pos=0.3] {Vue SPA} (0, 4.4);
+
+      % Step 2: Login
+      \draw[arrow] (0, 3.8) -- node[above, pos=0.3] {POST /api/v1/uc/login} (2.5, 3.8);
+      \draw[arrow] (2.5, 3.6) -- node[above, pos=0.3] {转发} (7.5, 3.6);
+      \draw[arrow, dashed] (7.5, 3.4) -- node[above, pos=0.3] {JWT token} (0, 3.4);
+
+      % Step 3: API call
+      \draw[arrow] (0, 2.6) -- node[above, pos=0.3] {GET /api/v2/upctl/api/tickets} (2.5, 2.6);
+      \draw[arrow] (2.5, 2.4) -- node[above, pos=0.3] {转发} (10, 2.4);
+      \draw[arrow] (10, 2.2) -- node[above, pos=0.3] {代理请求} (12.5, 2.2);
+      \draw[arrow, dashed] (12.5, 2.0) -- node[above, pos=0.3] {工单数据} (10, 2.0);
+      \draw[arrow, dashed] (10, 1.8) -- node[above, pos=0.3] {JSON} (0, 1.8);
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\begin{frame}[shrink=10]{AI Agent 工作流程}
+  \begin{center}
+    \begin{tikzpicture}[node distance=0.3cm, auto, font=\tiny]
+      \tikzset{block/.style={rectangle, draw, rounded corners, minimum width=1.5cm, minimum height=0.4cm, align=center, font=\tiny}};
+      
+      \node[block, fill=red!20] (ai) {ai-agent};
+      \node[block, fill=purple!20, right=of ai] (svc) {upctl-svc};
+      \node[block, fill=teal!20, right=of svc] (gitea) {Gitea};
+      \node[block, fill=cyan!20, right=of gitea] (ds) {DeepSeek API};
+
+      % Arrow 1: Poll
+      \draw[->, thick] ([yshift=0.3cm]ai.east) -- node[above] {每 5m 轮询} ([yshift=0.3cm]svc.west);
+      \draw[->, thick] ([yshift=0.3cm]svc.east) -- node[above] {查 approved 工单} ([yshift=0.3cm]gitea.west);
+      \draw[->, thick, dashed] ([yshift=0.3cm]gitea.west) -- ([yshift=0.3cm]svc.east);
+      \draw[->, thick, dashed] ([yshift=0.3cm]svc.west) -- ([yshift=0.3cm]ai.east);
+
+      % Arrow 2: Process
+      \draw[->, thick] ([yshift=-0.3cm]ai.east) -- node[below] {加 in\_progress} ([yshift=-0.3cm]svc.west);
+      \draw[->, thick] ([yshift=-0.3cm]svc.east) -- node[below] {调用 API} ([yshift=-0.3cm]gitea.west);
+      \draw[->, thick] ([yshift=-0.3cm]gitea.east) -- node[below] {发送工单} (ds);
+      \draw[->, thick, dashed] (ds.south) ++(-0.3,0) -- ++(0,-0.5) -| node[below, xshift=-0.5cm] {处理结果} ([yshift=-1.2cm]ai.south) -- ([yshift=-0.6cm]ai.south);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{10pt}
+  \begin{enumerate}
+    \item ai-agent 每 5 分钟轮询 upctl-svc
+    \item upctl-svc 代理查询 Gitea 已批准工单
+    \item 找到工单 → 打 in\_progress 标签
+    \item 调用 DeepSeek API 发送工单内容
+    \item 收到回复 → 提交评论 → 关闭工单
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]{API 路由 (nginx)}
+  \begin{table}
+    \fontsize{9}{11}\selectfont
+    \begin{tabular}{ll}
+      \toprule
+      Location & Upstream \\
+      \midrule
+      \texttt{/} & Static files (upctl-web dist) \\
+      \texttt{/admin/} & \texttt{authcoreadmin:80} \\
+      \texttt{/api/v1/uc/} & \texttt{authcore:3000} \\
+      \texttt{/api/v2/upctl/api/} & \texttt{upctl-svc:3005} \\
+      \texttt{/gitea/} & \texttt{gitea:3000} \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+
+  \vspace{6pt}
+  \textbf{服务详情：}
+  \begin{description}
+    \item[upctl-web] Vue 3 + Vite SPA，API 调用经 nginx 同源代理。
+    \item[upctl-svc] Rust Axum 服务：Gitea 代理工单 CRUD、附件上传、JWT 鉴权。
+    \item[ai-agent] Python worker：轮询 upctl-svc、经 DeepSeek API 处理工单、tmux 托管交互。
+  \end{description}
+\end{frame}
+
+% ============================================
+% GTM Phases
+% ============================================
+\section{分阶段落地}
+
+\begin{frame}{Phase 1：开源核心 + 方法论品牌 \hfill Month 1--3}
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+    \footnotesize
+    \begin{block}{做什么}
+      \begin{itemize}
+        \item 开源 \texttt{upctl} CLI（Rust，单二进制）
+        \item 三个核心命令：\texttt{init / monitor / compact}
+        \item 发布方法论白皮书（EN + CN）
+        \item Hacker News / Reddit / 掘金 推广
+      \end{itemize}
+    \end{block}
+
+    \column{0.48\textwidth}
+    \footnotesize
+    \begin{block}{不要做什么}
+      \begin{itemize}
+        \item 不要做可视化 UI
+        \item 不要做 multi-agent 编排
+        \item 不要承诺兼容所有模型
+      \end{itemize}
+    \end{block}
+  \end{columns}
+
+  \vspace{6pt}
+  \begin{alertblock}{Phase 1 成功标准}
+    \small GitHub $\ge$ 500 stars~+~5 个团队在无帮助情况下自搭建并持续使用 $\ge$ 1 个月
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Phase 2：SaaS 平台 \hfill Month 4--9}
+  \begin{itemize}
+    \item 搭建 \texttt{upctl.tech} — Agent 可靠性 PaaS
+    \item 核心功能：Agent 托管运行时 + 埋点 Dashboard (SaaS) + Compact 历史回溯
+    \item 目标用户：3--10 人的 AI-native 小团队、独立开发者
+  \end{itemize}
+
+  \vspace{8pt}
+  \begin{block}{关键指标}
+    \centering 付费转化率 \quad + \quad 月留存率
+  \end{block}
+\end{frame}
+
+\begin{frame}{Phase 3：企业私有化部署 \hfill Month 10--18}
+  \footnotesize
+  \begin{itemize}
+    \item Docker Compose / Kubernetes Helm Chart 一键部署
+    \item 企业版功能：SSO、审计日志、多租户、SLA
+    \item 客户画像：\textbf{金融 / 医疗 / 制造业}有内部 LLM 工具团队的客户
+  \end{itemize}
+
+  \vspace{8pt}
+  \begin{exampleblock}{获取第一个 Design Partner}
+    \small 一个真实的客户案例比 1000 个 star 更有说服力。通过现有关系网络找到愿意试用的团队，免费或低价部署，将案例做扎实后再进入市场推广阶段。
+  \end{exampleblock}
+\end{frame}
+
+% ============================================
+% Market Feasibility
+% ============================================
+\section{市场可行性}
+
+\begin{frame}[shrink=8]{机会 vs 风险}
+  \begin{columns}[T]
+    \column{0.49\textwidth}
+    \footnotesize
+    \begin{block}{有利因素 \textcolor{mygreen}{\faArrowUp}}
+      \begin{enumerate}
+        \item \textbf{时机}：2026 年是 agent 从玩具到工具的关键年
+        \item \textbf{差异化}：tmux 运行时记忆点独特，易在技术社区传播
+        \item \textbf{门槛低}：Phase 1 只需 1 人即可启动
+        \item \textbf{已有基础}：可复用现有公司法务/财务基础设施
+      \end{enumerate}
+    \end{block}
+
+    \column{0.49\textwidth}
+    \footnotesize
+    \begin{block}{风险因素 \textcolor{myred}{\faArrowDown}}
+      \begin{enumerate}
+        \item \textbf{平台内建}：Anthropic/OpenAI 可能内建类似能力
+        \item \textbf{市场教育}：概念尚未形成共识
+        \item \textbf{变现路径长}：开源→企业版需 3--5 年
+        \item \textbf{双向竞争}：上有大平台，下有 DIY 脚本
+      \end{enumerate}
+    \end{block}
+  \end{columns}
+
+  \vspace{6pt}
+  \begin{alertblock}{核心风险应对}
+    \small\textbf{不要绑死在单一模型上}。适配层从 Day 1 就支持多模型，Claude 内建同类能力时切换到差异化。
+  \end{alertblock}
+\end{frame}
+
+% ============================================
+% Industry Position
+% ============================================
+\begin{frame}[shrink=18]{行业位置：定义者而非追随者}
+  \begin{center}
+    \begin{tikzpicture}[yscale=0.8, xscale=0.95]
+      \draw[thick,->] (-1,0) -- (9,0) node[right] {\small Agent 可靠性工程意识};
+      \draw[thick,->] (0,-1) -- (0,3.5) node[above] {\small 市场规模};
+
+      \draw[fill=myblue!20,draw=myblue] (1,0.3) rectangle (4,1.5);
+      \node[font=\footnotesize,text=myblue] at (2.5,0.9) {\textbf{当前}};
+
+      \draw[fill=mygreen!20,draw=mygreen] (5,1.0) rectangle (8.5,2.5);
+      \node[font=\footnotesize,text=mygreen] at (6.75,1.75) {\textbf{2-3 年后}};
+
+      \node[font=\footnotesize,text=myred] at (6.75,3.2) {\textbf{[upctl] 定位}};
+      \draw[->,myred,thick] (6.75,3.0) -- (6.75,2.6);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{-4pt}
+  {\tiny\centering
+    \textbf{不是领导者，但有机会成为定义者。}\\[1pt]
+    前提：Phase 1 的内容输出要密集且高质量——博客、talk、开源文档三管齐下，
+    让"Agent 可靠性工程"这个概念与 upctl 绑定。\par}
+\end{frame}
+
+% ============================================
+% Practical Advice
+% ============================================
+\begin{frame}[shrink=12]{务实建议：启动路线}
+  \scriptsize
+  \vspace{-4pt}
+  \begin{enumerate}
+    \setlength{\itemsep}{1pt}
+    \setlength{\parsep}{0pt}
+    \item \textbf{不要先搭平台再找用户。}\\
+      Phase 1 的 CLI 开源就是验证——没人用 CLI，平台也不会有付费用户。
+    \item \textbf{用博客驱动增长。}\\
+      每篇博文让读者"学到东西" + "知道这个工具能做什么"。
+    \item \textbf{从 Design Partner 起步。}\\
+      通过现有关系网络找到愿意试用的团队，免费或低价部署，把案例做扎实。
+    \item \textbf{衡量标准不是 star 数。}\\
+      真正的指标：5--10 个团队在没帮助的情况下自搭建并持续使用超一个月。
+  \end{enumerate}
+\end{frame}
+
+% ============================================
+% Summary
+% ============================================
+\begin{frame}{一句话}
+  \begin{center}
+    \vspace{2cm}
+    {\Large\bfseries upctl 的天花板}
+
+    \vspace{0.5cm}
+    {\large 取决于\textbf{「Agent 可靠性」是否能成为行业公认的问题类别。}}
+
+    \vspace{0.8cm}
+    如果两年后每家公司都在讨论 Agent Observability 和 Reliability，
+
+    而 upctl 是\textbf{第一个认真做这件事的}——\\[4pt]
+    那 upctl 的位置就对了。
+  \end{center}
+\end{frame}
+
+\begin{frame}[plain]
+  \begin{center}
+    \vspace{3cm}
+    {\Huge \textcolor{myblue}{\textbf{Thank You}}}
+
+    \vspace{0.8cm}
+    {\large \textbf{鉬馨玥翼}~\textregistered}
+
+    \vspace{0.3cm}
+    {\large \texttt{github.com/liweinan}}
+
+    \vspace{0.3cm}
+    {\large \texttt{weinan.io}}
+  \end{center}
+\end{frame}
+
+\end{document}
