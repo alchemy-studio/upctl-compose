@@ -130,7 +130,9 @@ test.describe("Project management page — UI flow", () => {
     await login(page);
     await page.locator('a:has-text("项目管理")').click();
     await expect(page).toHaveURL(/\/projects/);
-    await expect(page.locator("h1")).toContainText("项目管理");
+    // Page has no h1 — check the "返回" button confirms we're on projects page
+    await expect(page.locator('button:has-text("← 返回")')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('button:has-text("新建项目")')).toBeVisible();
   });
 
   test("opens and closes create modal", async ({ page }) => {

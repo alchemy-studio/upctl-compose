@@ -5,6 +5,7 @@ const ADMIN_URL = 'https://admin.moicen.com';
 
 test.describe('Attachment rendering', () => {
   test('file attachment renders as box with icon + filename + download button', async ({ page }) => {
+    test.skip(!process.env.MOICEN_E2E_UNIONID, '需要 MOICEN_E2E_UNIONID');
     // Login via API
     const lr = await page.request.get(ADMIN_URL + '/api/v1/uc/login2_with_unionid', {
       headers: { Unionid: process.env.MOICEN_E2E_UNIONID || '' }

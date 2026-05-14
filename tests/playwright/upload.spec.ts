@@ -64,7 +64,8 @@ test.describe("Image upload", () => {
 
     await loginViaForm(page);
     await navigateTo(page, "/tickets/new");
-    await expect(page.locator("h1")).toContainText("新建工单");
+    // Page should show create ticket form (no h1 with page title)
+    await expect(page.locator('input[placeholder="请输入工单标题"]')).toBeVisible({ timeout: 10_000 });
 
     // Fill title
     const title = `E2E upload test ${Date.now()}`;
