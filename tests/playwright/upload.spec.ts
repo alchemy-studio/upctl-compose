@@ -75,7 +75,7 @@ test.describe("Image upload", () => {
     await fileInput.setInputFiles(pngPath);
 
     // Wait for upload to complete and markdown to appear in body
-    await expect(page.locator("textarea")).toHaveValue(/!\[image]\(/, { timeout: 10_000 });
+    await expect(page.locator("textarea")).toHaveValue(/!\[test\.png]\(/, { timeout: 10_000 });
 
     // Submit
     await page.locator('button:has-text("提交")').click();
@@ -127,7 +127,7 @@ test.describe("Image upload", () => {
     await fileInputs.setInputFiles(pngPath);
 
     // Wait for markdown to appear
-    await expect(page.locator(".reply-section textarea")).toHaveValue(/!\[image]\(/, { timeout: 10_000 });
+    await expect(page.locator(".reply-section textarea")).toHaveValue(/!\[comment\.png]\(/, { timeout: 10_000 });
 
     // Send comment
     await page.locator(".reply-section button:has-text('发送')").click();
@@ -163,6 +163,6 @@ test.describe("Image upload", () => {
     // Should NOT add image markdown
     await page.waitForTimeout(500);
     const bodyText = await page.locator("textarea").inputValue();
-    expect(bodyText).not.toContain("![image](");
+    expect(bodyText).not.toContain("![fail.png](");
   });
 });
