@@ -48,7 +48,7 @@ graph TB
         NPS_CLI_MAC[NPS Client<br/>反向隧道 :10002 → SSH]
 
         subgraph Tmux [tmux 会话]
-            DEEPSEEK_TUI[deepseek-tui<br/>DeepSeek Agent<br/>(YOLO 模式)]
+            DEEPSEEK_TUI["deepseek-tui<br/>DeepSeek Agent<br/>(YOLO 模式)"]
             loop_watchdog[loop_watchdog.sh<br/>cron · 每 5 分钟<br/>拉取 approved 工单]
             work[work 会话<br/>手动运维]
         end
