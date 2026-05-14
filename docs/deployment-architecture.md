@@ -102,11 +102,11 @@ graph TB
     CODE -->|git push| GITEA
     PLAYWRIGHT -->|测试| OpenResty
 
-    %% 样式
-    classDef cloud fill:#1a1a2e,stroke:#e94560,color:#eee;
-    classDef mac fill:#16213e,stroke:#0f3460,color:#eee;
-    classDef web fill:#0f3460,stroke:#533483,color:#eee;
-    classDef agent fill:#533483,stroke:#e94560,color:#eee,stroke-dasharray: 5 5;
+    %% 样式（透明背景）
+    classDef cloud fill:#e8f0fe,stroke:#1967d2,color:#1a1a2e;
+    classDef mac fill:#fce8e6,stroke:#d93025,color:#1a1a2e;
+    classDef web fill:#e6f4ea,stroke:#137333,color:#1a1a2e;
+    classDef agent fill:#f3e8fd,stroke:#7c3aed,color:#1a1a2e,stroke-dasharray: 5 5;
     class Cloud_Moicen,Cloud_Alchemy cloud;
     class Studio_Mac mac;
     class htytch,htyts,upctl_web,authcore_web web;
