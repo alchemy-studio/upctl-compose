@@ -60,7 +60,7 @@
     </div>
 
     <!-- Create/Edit modal -->
-    <div v-if="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-[100]" @click.self="closeModal">
+    <div v-if="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] dialog" @click.self="closeModal">
       <div class="bg-white rounded-xl p-6 w-[90%] max-w-[600px] max-h-[90vh] overflow-y-auto">
         <h3 class="text-base font-medium text-text mb-4">{{ isEditing ? '编辑应用' : '新增应用' }}</h3>
         <div class="mb-3.5">
