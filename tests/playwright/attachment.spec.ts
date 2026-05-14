@@ -7,7 +7,7 @@ test.describe('Attachment rendering', () => {
   test('file attachment renders as box with icon + filename + download button', async ({ page }) => {
     // Login via API
     const lr = await page.request.get(ADMIN_URL + '/api/v1/uc/login2_with_unionid', {
-      headers: { Unionid: 'REDACTED' }
+      headers: { Unionid: process.env.MOICEN_E2E_UNIONID || '' }
     });
     const ld = await lr.json();
     const token = ld.d;
