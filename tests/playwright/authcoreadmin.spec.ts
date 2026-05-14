@@ -58,9 +58,9 @@ test.describe("AuthCoreAdmin — App management", () => {
   test("opens and closes create app modal", async ({ page }) => {
     await login(page, "/apps");
     await page.locator('button:has-text("新增应用")').click();
-    await expect(page.locator(".dialog h3")).toContainText("新增应用");
-    await page.locator('.dialog button:has-text("取消")').click();
-    await expect(page.locator(".dialog")).not.toBeVisible();
+    await expect(page.locator("h3:has-text('新增应用')")).toBeVisible({ timeout: 5000 });
+    await page.locator('button:has-text("取消")').click();
+    await expect(page.locator("h3:has-text('新增应用')")).not.toBeVisible();
   });
 });
 
