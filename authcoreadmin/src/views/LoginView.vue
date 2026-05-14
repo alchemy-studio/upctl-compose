@@ -1,16 +1,17 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <h1>AuthCore 管理后台</h1>
-      <p class="subtitle">用户管理 / 角色管理</p>
-      <div class="login-form">
-        <input v-model="unionid" placeholder="union_id（开发模式）" class="form-input" />
-        <div class="divider"><span>或</span></div>
-        <input v-model="username" placeholder="用户名" class="form-input" />
-        <input v-model="password" type="password" placeholder="密码" class="form-input" />
-        <button @click="submit" :disabled="!canLogin" class="btn btn-primary">登录</button>
+  <div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2]">
+    <div class="bg-surface rounded-2xl p-10 shadow-[0_20px_60px_rgba(0,0,0,0.15)] text-center w-[400px]">
+      <h1 class="text-2xl mb-2 text-text">AuthCore 管理后台</h1>
+      <p class="text-text-muted mb-6 text-sm">用户管理 / 角色管理</p>
+      <div class="flex flex-col gap-3">
+        <input v-model="unionid" placeholder="union_id（开发模式）" class="px-4 py-2.5 border border-border rounded-lg text-sm outline-none focus:border-primary" />
+        <div class="flex items-center gap-3 text-text-muted text-xs before:flex-1 before:border-t before:border-border after:flex-1 after:border-t after:border-border">或</div>
+        <input v-model="username" placeholder="用户名" class="px-4 py-2.5 border border-border rounded-lg text-sm outline-none focus:border-primary" />
+        <input v-model="password" type="password" placeholder="密码" class="px-4 py-2.5 border border-border rounded-lg text-sm outline-none focus:border-primary" />
+        <button @click="submit" :disabled="!canLogin"
+          class="px-6 py-2.5 rounded-lg text-sm cursor-pointer bg-primary text-white hover:bg-primary-dark disabled:bg-gray-300 disabled:cursor-not-allowed">登录</button>
       </div>
-      <p v-if="error" class="error-msg">{{ error }}</p>
+      <p v-if="error" class="text-danger mt-3 text-sm">{{ error }}</p>
     </div>
   </div>
 </template>
@@ -47,27 +48,3 @@ async function submit() {
   }
 }
 </script>
-
-<style scoped>
-.login-container {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-.login-card {
-  background: white; border-radius: 16px; padding: 40px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15); text-align: center; width: 400px;
-}
-.login-card h1 { font-size: 24px; margin-bottom: 8px; color: #333; }
-.subtitle { color: #666; margin-bottom: 24px; font-size: 14px; }
-.login-form { display: flex; flex-direction: column; gap: 12px; }
-.form-input { padding: 10px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-.form-input:focus { border-color: #667eea; }
-.divider { display: flex; align-items: center; color: #ccc; font-size: 12px; }
-.divider::before, .divider::after { content: ''; flex: 1; border-top: 1px solid #eee; }
-.divider span { padding: 0 12px; }
-.btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
-.btn-primary { background: #667eea; color: white; }
-.btn-primary:hover { background: #5a6fd6; }
-.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
-.error-msg { color: #e74c3c; margin-top: 12px; font-size: 14px; }
-</style>
