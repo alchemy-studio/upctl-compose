@@ -17,11 +17,26 @@ jobs:
       - name: Validate docker-compose.yml
         run: docker compose config
 
+  submodule-check:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Verify upctl-agent submodule
+        run: |
+          test -d upctl-agent/ai-agent
+          test -f upctl-agent/scripts/cleanup_in_progress.sh
+          echo "upctl-agent submodule OK"
+
   integration:
     needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Mask secrets in logs
         env:
@@ -139,6 +154,17 @@ jobs:
 
       - name: Copy test file to ai-agent
         run: docker compose cp tests/e2e_test.py ai-agent:/app/e2e_test.py
+
+      - name: Test — cleanup_in_progress.sh syntax and dry-run
+        run: |
+          docker compose cp upctl-agent/scripts/cleanup_in_progress.sh ai-agent:/app/cleanup_in_progress.sh
+          docker compose exec -T ai-agent bash -c '
+            bash -n /app/cleanup_in_progress.sh && echo "SYNTAX OK"
+            timeout 10 bash /app/cleanup_in_progress.sh && exit 1 || echo "NO-ENV exits nonzero: OK"
+            export GITEA_API_BASE="http://gitea:3000/api/v1/repos/weli/tickets"
+            export GITEA_AUTH_BASIC="ai-bot:ai-bot-dev-pass"
+            timeout 30 bash /app/cleanup_in_progress.sh && echo "LIVE RUN OK" || echo "LIVE RUN result: $?"
+          '
 
       - name: E2E — Authentication
         env:
