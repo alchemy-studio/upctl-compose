@@ -87,7 +87,7 @@ services:
 
   ai-agent:
     build:
-      context: ./ai-agent
+      context: ./upctl-agent/ai-agent
     depends_on:
       upctl-svc:
         condition: service_started
