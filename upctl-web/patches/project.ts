@@ -1,4 +1,4 @@
-import { reactive } from 'vue'
+import { computed, reactive } from 'vue'
 import request from '@/utils/request'
 import type { Project } from '@/types'
 
@@ -55,5 +55,7 @@ export default function useProject() {
     return r
   }
 
-  return { ...store, store, fetchAll, create, update, remove }
+  const activeList = computed(() => store.list.filter(p => !p.is_archived))
+
+  return { ...store, store, fetchAll, create, update, remove, activeList }
 }

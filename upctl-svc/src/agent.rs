@@ -9,6 +9,12 @@ impl std::fmt::Display for AgentError {
     }
 }
 
+impl From<String> for AgentError {
+    fn from(msg: String) -> Self {
+        AgentError(msg)
+    }
+}
+
 /// Agent backend abstraction — tmux operations via local or SSH tunnel.
 ///
 /// # Configuration (env vars)
