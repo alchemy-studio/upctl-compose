@@ -208,7 +208,7 @@ jobs:
         run: |
           npm install
           npx playwright install chromium --with-deps 2>&1 | tail -3
-          npx playwright test
+          npx playwright test --reporter=list 2>&1
 
       - name: Cleanup
         if: always()
