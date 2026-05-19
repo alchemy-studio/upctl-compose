@@ -30,7 +30,7 @@ test.describe("部署环境", () => {
       await page.waitForTimeout(2000);
       if (page.url().includes("/login")) {
         // SPA lost auth — re-login
-        const lr = await page.request.get(`${BASE_URL}/api/v1/uc/login_with_password`, {
+        const lr = await page.request.post(`${BASE_URL}/api/v1/uc/login_with_password`, {
           headers: { HtyHost: "localhost", "Content-Type": "application/json" },
           data: { username: "demo", password: "demo123" },
         });

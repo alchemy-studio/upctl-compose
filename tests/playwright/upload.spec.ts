@@ -38,12 +38,23 @@ async function navigateTo(page: Page, path: string) {
       window.location.href = p;
     }
   }, path);
-  // Wait for SPA to render after navigation
   await page.waitForTimeout(2000);
-  // Fallback: if SPA nav didn't work, try direct goto
   if (!page.url().includes(path.replace(/^\//, ''))) {
     await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
     await page.waitForTimeout(2000);
+  }
+  // If SPA redirects to login, re-authenticate via API
+  if (page.url().includes("/login")) {
+    const lr = await page.request.post(`${BASE_URL}/api/v1/uc/login_with_password`, {
+      headers: { HtyHost: "localhost", "Content-Type": "application/json" },
+      data: { username: "demo", password: "demo123" },
+    });
+    const ld = await lr.json();
+    if (ld.r) {
+      await page.evaluate((t) => localStorage.setItem("Authorization", t), ld.d);
+      await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+      await page.waitForTimeout(2000);
+    }
   }
 }
 
