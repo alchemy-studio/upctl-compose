@@ -38,8 +38,8 @@ async function login(page: Page, destination?: string) {
   if (!currentUrl.includes("/admin")) {
     await page.goto(`${AUTH_ADMIN_URL}/`, { waitUntil: "networkidle" });
   }
-  // Confirm dashboard has fully rendered with its h1
-  await expect(page.locator("h1")).toContainText("AuthCore");
+  // Confirm the default admin page has fully rendered.
+  await expect(page.locator("h1")).toContainText("用户管理");
   // Navigate to desired page via SPA to preserve user roles in the store
   if (destination) {
     await spaNavigate(page, destination);
@@ -47,9 +47,9 @@ async function login(page: Page, destination?: string) {
 }
 
 test.describe("AuthCoreAdmin — App management", () => {
-  test("navigates to apps page from dashboard", async ({ page }) => {
+  test("navigates to apps page from default user page", async ({ page }) => {
     await login(page);
-    await expect(page.locator("h1")).toContainText("AuthCore");
+    await expect(page.locator("h1")).toContainText("用户管理");
     await page.locator('a:has-text("应用管理")').first().click();
     await expect(page).toHaveURL(/\/apps/);
   });
@@ -73,17 +73,18 @@ test.describe("AuthCoreAdmin — Navigation", () => {
   test("navigation links work between pages", async ({ page }) => {
     await login(page);
 
-    await page.locator('nav a:has-text("用户")').click();
+    await page.locator('nav a:has-text("用户管理")').click();
     await expect(page).toHaveURL(/\/users/);
     await expect(page.locator("h1")).toContainText("用户管理");
 
-    await page.locator('nav a:has-text("应用")').click();
+    await page.locator('nav a:has-text("应用管理")').click();
     await expect(page).toHaveURL(/\/apps/);
     await expect(page.locator("h1")).toContainText("应用管理");
 
-    // Apps page has no nav — use SPA navigation to return to dashboard
+    // Use SPA navigation to return to the default admin page.
     await spaNavigate(page, "/");
     await expect(page).toHaveURL(/\/admin\/?$/);
+    await expect(page.locator("h1")).toContainText("用户管理");
   });
 });
 

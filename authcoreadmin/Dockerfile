@@ -6,8 +6,6 @@ WORKDIR /app
 RUN apk add --no-cache git && \
     git clone --depth 1 https://github.com/alchemy-studio/AuthCoreAdmin.git .
 
-COPY . .
-
 RUN corepack enable && corepack prepare pnpm@10 --activate && \
     pnpm install --no-frozen-lockfile
 

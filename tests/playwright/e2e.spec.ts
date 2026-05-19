@@ -54,7 +54,8 @@ test.describe("Login page", () => {
   test("renders the login page with title and form", async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
     await expect(page.locator("h1")).toContainText("工单管理系统");
-    await expect(page.locator(".login-card")).toBeVisible();
+    await expect(page.locator('input[placeholder="用户名"]')).toBeVisible();
+    await expect(page.locator('button:has-text("登录")')).toBeVisible();
   });
 
   test("redirects unauthenticated users to /login", async ({ page }) => {
