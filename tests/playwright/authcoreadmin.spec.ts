@@ -46,8 +46,21 @@ async function login(page: Page, destination?: string) {
   }
 }
 
+test.describe("AuthCoreAdmin — Login", () => {
+  test("compose 默认显示用户名密码，无微信二维码", async ({ page }) => {
+    await page.goto(`${AUTH_ADMIN_URL}/login`, { waitUntil: "networkidle" });
+    await expect(page.locator('input[placeholder="用户名"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="密码"]')).toBeVisible();
+    await expect(page.locator("#login-qr iframe")).toHaveCount(0);
+  });
+
+  test("demo 用户 ADMIN 登录成功", async ({ page }) => {
+    await login(page);
+    await expect(page.locator("h1")).toContainText("用户管理");
+  });
+});
+
 test.describe("AuthCoreAdmin — App management", () => {
-  test("navigates to apps page from default user page", async ({ page }) => {
     await login(page);
     await expect(page.locator("h1")).toContainText("用户管理");
     await page.locator('a:has-text("应用管理")').first().click();
