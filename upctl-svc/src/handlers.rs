@@ -12,6 +12,21 @@ use sha2::Sha256;
 
 use crate::config;
 
+/// GET /api/v2/upctl/api/current_user — return current logged-in user info from JWT
+pub async fn current_user(
+    token: HtyToken,
+) -> Result<Json<HtyResponse<serde_json::Value>>, StatusCode> {
+    let hty_id = token.hty_id.clone().unwrap_or_default();
+    let roles = token.roles.clone().unwrap_or_default();
+
+    let resp = serde_json::json!({
+        "hty_id": hty_id,
+        "real_name": hty_id,
+        "roles": roles,
+    });
+    Ok(Json(wrap_ok_resp(resp)))
+}
+
 type LabelMap = HashMap<String, i64>;
 
 /// Simple URL percent-encoding for query parameters.

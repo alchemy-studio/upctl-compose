@@ -24,6 +24,11 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/", get(|| async { "upctl-svc" }))
+        // Current user (JWT)
+        .route(
+            "/api/v2/upctl/api/current_user",
+            get(handlers::current_user),
+        )
         // Ticket Gitea proxy
         .route(
             "/api/v2/upctl/api/tickets",
