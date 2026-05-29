@@ -1,8 +1,8 @@
 \documentclass[12pt,aspectratio=169,utf8]{beamer}
 
-% ctex fontset=mac 自动使用 macOS 内置宋体/黑体，确保字体正确嵌入 PDF
-\usepackage[fontset=mac]{ctex}
-\setCJKmonofont{Heiti SC}               % 等宽字体重用黑体而非默认的华文仿宋
+% ctex fontset=auto 自动适配系统字体: macOS 用 ST 系列, Linux 用 Fandol 系列
+\usepackage{ctex}
+\IfFontExistsTF{Heiti SC}{\setCJKmonofont{Heiti SC}}{}  % 等宽字体: macOS 用黑体, 否则用 ctex 默认
 
 \usepackage{graphicx}
 \usepackage{xcolor}
