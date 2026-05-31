@@ -1064,6 +1064,60 @@ pub async fn agent_send_keys(
     }
 }
 
+/// POST /api/v2/upctl/api/tickets/{id}/emergency-stop — send ESC twice to agent to stop work
+pub async fn emergency_stop_ticket(
+    token: HtyToken,
+    Path(id): Path<String>,
+) -> Result<Json<HtyResponse<String>>, StatusCode> {
+    if !is_admin_or_tester(&token) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let session = std::env::var("AGENT_SESSION")
+        .or_else(|_| std::env::var("TMUX_DEFAULT_SESSION"))
+        .unwrap_or_else(|_| "deepseek".to_string());
+    if !crate::agent::AgentBackend::validate_session(&session) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let backend = crate::agent::AgentBackend::from_env();
+    // Send ESC twice for safety, with a brief pause between
+    let esc = "\x1b";
+    if let Err(e) = backend.send_keys(&session, esc, false).await {
+        let msg = format!("Failed to send ESC (1st): {e}");
+        return Ok(Json(HtyResponse {
+            r: false,
+            d: None,
+            e: Some(msg),
+            hty_err: None,
+        }));
+    }
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    if let Err(e) = backend.send_keys(&session, esc, false).await {
+        let msg = format!("Failed to send ESC (2nd): {e}");
+        return Ok(Json(HtyResponse {
+            r: false,
+            d: None,
+            e: Some(msg),
+            hty_err: None,
+        }));
+    }
+    // Post a comment on the ticket recording the emergency stop
+    let client = gitea_client();
+    let auth = config::gitea_auth_header();
+    let comment_body = format!("🛑 已向 agent 发送急停信号（ESC ×2，session: {session}）");
+    let comment_payload = serde_json::json!({ "body": comment_body });
+    let _ = client
+        .post(format!(
+            "{}/repos/weli/tickets/issues/{id}/comments",
+            config::gitea_api_base()
+        ))
+        .header("Authorization", auth.as_str())
+        .header("Content-Type", "application/json")
+        .json(&comment_payload)
+        .send()
+        .await;
+    Ok(Json(wrap_ok_resp("ESC sent twice".to_string())))
+}
+
 /// POST /api/v2/upctl/api/agent/prompt — send prompt to agent, wait, capture response
 #[derive(serde::Deserialize)]
 pub struct AgentPromptReq {

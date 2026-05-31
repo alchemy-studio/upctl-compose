@@ -94,6 +94,10 @@ async fn main() -> anyhow::Result<()> {
             post(handlers::agent_send_keys),
         )
         .route(
+            "/api/v2/upctl/api/tickets/{id}/emergency-stop",
+            post(handlers::emergency_stop_ticket),
+        )
+        .route(
             "/api/v2/upctl/api/agent/prompt",
             post(handlers::agent_prompt),
         )
