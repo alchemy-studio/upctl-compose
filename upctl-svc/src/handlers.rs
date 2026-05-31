@@ -289,7 +289,8 @@ pub async fn gitea_list_tickets(
         if let Some(name) = submitter {
             if let Some(user) = ticket.get_mut("user") {
                 if let Some(obj) = user.as_object_mut() {
-                    obj.insert("login".to_string(), serde_json::Value::String(name));
+                    obj.insert("login".to_string(), serde_json::Value::String(name.clone()));
+                    obj.insert("full_name".to_string(), serde_json::Value::String(name));
                 }
             }
             if let Some(body) = ticket.get_mut("body") {
@@ -298,6 +299,26 @@ pub async fn gitea_list_tickets(
                         if let Some(idx) = rest.find('\n') {
                             let after = &rest[idx..];
                             *body = serde_json::Value::String(after.trim_start().to_string());
+                        }
+                    }
+                }
+            }
+        }
+        // Fill in full_name from known login→name mappings when Gitea full_name is empty
+        if let Some(user) = ticket.get("user") {
+            if let Some(obj) = user.as_object() {
+                let login = obj.get("login").and_then(|v| v.as_str()).unwrap_or("");
+                let full_name = obj.get("full_name").and_then(|v| v.as_str()).unwrap_or("");
+                if full_name.is_empty() && !login.is_empty() {
+                    let display = match login {
+                        "ai-bot" => Some("阿难"),
+                        _ => None,
+                    };
+                    if let Some(n) = display {
+                        if let Some(user_mut) = ticket.get_mut("user") {
+                            if let Some(obj_mut) = user_mut.as_object_mut() {
+                                obj_mut.insert("full_name".to_string(), serde_json::Value::String(n.to_string()));
+                            }
                         }
                     }
                 }
@@ -564,7 +585,8 @@ pub async fn gitea_get_ticket(
     if let Some(name) = submitter {
         if let Some(user) = issue_val.get_mut("user") {
             if let Some(obj) = user.as_object_mut() {
-                obj.insert("login".to_string(), serde_json::Value::String(name));
+                obj.insert("login".to_string(), serde_json::Value::String(name.clone()));
+                obj.insert("full_name".to_string(), serde_json::Value::String(name));
             }
         }
         if let Some(body) = issue_val.get_mut("body") {
@@ -573,6 +595,26 @@ pub async fn gitea_get_ticket(
                     if let Some(idx) = rest.find('\n') {
                         let after = &rest[idx..];
                         *body = serde_json::Value::String(after.trim_start().to_string());
+                    }
+                }
+            }
+        }
+    }
+    // Fill in full_name from known login→name mappings when Gitea full_name is empty
+    if let Some(user) = issue_val.get("user") {
+        if let Some(obj) = user.as_object() {
+            let login = obj.get("login").and_then(|v| v.as_str()).unwrap_or("");
+            let full_name = obj.get("full_name").and_then(|v| v.as_str()).unwrap_or("");
+            if full_name.is_empty() && !login.is_empty() {
+                let display = match login {
+                    "ai-bot" => Some("阿难"),
+                    _ => None,
+                };
+                if let Some(n) = display {
+                    if let Some(user_mut) = issue_val.get_mut("user") {
+                        if let Some(obj_mut) = user_mut.as_object_mut() {
+                            obj_mut.insert("full_name".to_string(), serde_json::Value::String(n.to_string()));
+                        }
                     }
                 }
             }
